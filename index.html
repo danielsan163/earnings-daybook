@@ -173,7 +173,7 @@ select{border:1px solid var(--line);background:var(--surface);border-radius:8px;
 
 /* Notes */
 .note label{display:block;font-weight:600;margin-bottom:6px}
-.note textarea{width:100%;min-height:44px;resize:vertical;border:1px solid var(--line);background:var(--sunk);border-radius:8px;padding:10px;font:inherit;color:inherit}
+.note textarea{width:100%;min-height:calc(3lh + 22px);line-height:1.45;resize:vertical;border:1px solid var(--line);background:var(--sunk);border-radius:8px;padding:10px;font:inherit;color:inherit}
 .note textarea:focus{background:var(--surface);border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
 .notelist{display:flex;flex-direction:column}
 .notelist button{all:unset;cursor:pointer;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;padding:10px 0;border-top:1px solid var(--line)}
@@ -199,6 +199,18 @@ a.tile{color:inherit;text-decoration:none}
 .goalrow .lbl span{font-size:.78rem;color:var(--muted)}
 .remind{border:1px solid var(--hi);background:var(--accent-soft)}
 .remind h2{color:var(--accent)}
+/* Help */
+.help details{border-top:1px solid var(--line)}
+.help details:first-of-type{border-top:0}
+.help summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;font-weight:600}
+.help summary::-webkit-details-marker{display:none}
+.help summary::after{content:"+";font-family:var(--f-num);color:var(--muted);font-size:1.1rem}
+.help details[open] summary::after{content:"–"}
+.help .body{padding-bottom:12px;color:var(--ink);max-width:65ch}
+.help .body p{margin:0 0 8px}
+.help .body ul{margin:0 0 8px;padding-left:20px}
+.help .body li{margin-bottom:4px}
+.help .body b{font-weight:600}
 .fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:40}
 .toast.big{font-size:1rem;padding:14px 20px;border-radius:14px;background:var(--accent);color:var(--accent-ink)}
 
@@ -242,7 +254,7 @@ a.tile{color:inherit;text-decoration:none}
       <form id="entryForm" class="stack" autocomplete="off">
         <div class="entries" id="entries"></div>
         <div class="note"><label for="dayNote">Note <span class="muted small" style="font-weight:400">(optional)</span></label>
-          <textarea id="dayNote" rows="1" maxlength="280" placeholder="e.g. new audiobook out, BookTok video took off"></textarea></div>
+          <textarea id="dayNote" rows="3" maxlength="280" placeholder="e.g. new audiobook out, BookTok video took off"></textarea></div>
         <div class="daytotal"><h3>Day total</h3><strong class="num" id="dayTotal">$0.00</strong></div>
         <div class="savebar">
           <button class="btn primary" id="saveBtn" type="submit">Save day</button>
@@ -363,6 +375,87 @@ a.tile{color:inherit;text-decoration:none}
         <button class="btn" style="flex:1;padding:12px" id="importBtn" type="button">Import backup</button>
         <input type="file" id="importFile" accept="application/json,.json" hidden>
       </div>
+    </div>
+    <div class="panel help">
+      <h2 style="margin-bottom:4px">How it works</h2>
+      <details>
+        <summary>Logging a day</summary>
+        <div class="body">
+          <p>On <b>Today</b>, type what each source earned. Press Enter to jump to the next box; Enter on the last box saves. An empty box counts as $0.</p>
+          <ul>
+            <li>Under each source it shows the last amount you entered and when.</li>
+            <li>Use the arrows or the date box to go back and fill in or fix an earlier day. Saving a day again replaces what was there.</li>
+            <li>Days from the last two weeks that haven't been logged show as buttons under the form. Tap one to jump to it.</li>
+          </ul>
+        </div>
+      </details>
+      <details>
+        <summary>Notes</summary>
+        <div class="body">
+          <p>Add a short note to any day, like "new audiobook out" or "BookTok video took off". It saves with the day.</p>
+          <ul>
+            <li>On <b>Charts</b>, a gold dot above a bar means that day (or month, in Year view) has a note.</li>
+            <li>Tap a bar to see its note in the pop-up.</li>
+            <li>Every note in the period you're looking at is listed under the chart. Tap one to open that day.</li>
+          </ul>
+          <p>That makes it easy to see what caused a spike or a dip.</p>
+        </div>
+      </details>
+      <details>
+        <summary>Goals</summary>
+        <div class="body">
+          <p>Set goals for this week, this month and this year under <b>Goals</b> above. Weeks run Sunday to Saturday.</p>
+          <ul>
+            <li>The tiles at the bottom of Today show progress and what you're on pace for.</li>
+            <li>Hitting a goal sets off fireworks the first time it happens.</li>
+            <li>When a new week, month or year starts (Sunday, the 1st, New Year's Day), a card on Today asks for the new goal, filled in with last time's amount. Tap "Not now" to skip it.</li>
+          </ul>
+        </div>
+      </details>
+      <details>
+        <summary>Charts</summary>
+        <div class="body">
+          <ul>
+            <li>Switch between <b>Week</b>, <b>Month</b> and <b>Year</b>, and use the arrows to look at earlier periods.</li>
+            <li><b>By source</b> stacks each source in its own colour; <b>Total</b> shows one bar.</li>
+            <li>Year view has a dashed line for the same months last year.</li>
+            <li>The table underneath shows each source's share and the change from the previous period.</li>
+          </ul>
+        </div>
+      </details>
+      <details>
+        <summary>Forecast</summary>
+        <div class="body">
+          <p>Projects next month, the next 12 months, and how this month will end.</p>
+          <ul>
+            <li>Pick how much history to base it on, from the last 7 days to the last year.</li>
+            <li><b>Steady average</b> assumes recent daily earnings carry on. <b>Follow the trend</b> extends recent growth or decline, and can swing a lot over a year.</li>
+            <li>It's only as good as the days logged, so a few weeks of entries makes it much more useful.</li>
+          </ul>
+        </div>
+      </details>
+      <details>
+        <summary>Sources, theme and currency</summary>
+        <div class="body">
+          <ul>
+            <li>Add, rename or reorder sources under <b>Income sources</b>. Tap the colour square to change a source's chart colour.</li>
+            <li><b>Archive</b> hides a source from Today but keeps its history in the charts. <b>Restore</b> brings it back.</li>
+            <li>Pick a <b>Theme</b>; each one follows the phone's light or dark mode.</li>
+          </ul>
+        </div>
+      </details>
+      <details>
+        <summary>Keeping your data safe</summary>
+        <div class="body">
+          <p>Everything is saved on this phone only. Nothing is sent anywhere.</p>
+          <ul>
+            <li>Open the Daybook from the Home Screen icon, not a Private tab in Safari.</li>
+            <li>Every week or two, tap <b>Export backup</b> and save the file to Files or iCloud Drive. The app reminds you after 14 days.</li>
+            <li>On a new phone, or after clearing Safari, use <b>Import backup</b> to bring everything back, including notes and goals.</li>
+            <li><b>Export CSV</b> gives a spreadsheet of every logged day.</li>
+          </ul>
+        </div>
+      </details>
     </div>
   </section>
 </div>
