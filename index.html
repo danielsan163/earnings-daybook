@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Earnings Daybook</title>
-<meta name="theme-color" content="#eef2f0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0e1412" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" id="themeColor" content="#eef2f0">
+<script>try{var p=localStorage.getItem("earnings-daybook-theme");if(p&&p!=="evergreen")document.documentElement.setAttribute("data-palette",p);}catch(e){}</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Daybook">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -15,28 +15,50 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: one narrow working column; a sticky tab bar; the daily entry form is the first thing on screen. */
+/* Layout: one narrow working column; a sticky tab bar; the daily entry form is the first thing on screen.
+   Themes: each palette sets the same tokens, light first, then dark under prefers-color-scheme.
+   --hi is the highlight colour (day total, projected bars, goal bars, note markers). */
 :root{
   --bg:#eef2f0; --surface:#ffffff; --sunk:#e4eae7; --ink:#15201c; --muted:#5a6a64; --line:#d3dcd8;
-  --accent:#0d6b58; --accent-ink:#ffffff; --accent-soft:#d6ece5;
+  --accent:#0d6b58; --accent-ink:#ffffff; --accent-soft:#d6ece5; --hi:#0d6b58;
   --good:#1d7a3e; --bad:#b3261e; --warn:#9a5b00; --warn-soft:#fbeed6;
   --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --f-body:"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --f-num:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-  --r:10px;
+  --r:10px; color-scheme:light;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+@media (prefers-color-scheme: dark){:root{
   --bg:#0e1412; --surface:#161e1b; --sunk:#111816; --ink:#e4ece9; --muted:#91a29b; --line:#26322e;
-  --accent:#52bfa3; --accent-ink:#062019; --accent-soft:#1a3530;
+  --accent:#52bfa3; --accent-ink:#062019; --accent-soft:#1a3530; --hi:#52bfa3;
   --good:#5cc47e; --bad:#f07a70; --warn:#e3a94a; --warn-soft:#3a2c14; color-scheme:dark;}}
-:root[data-theme="dark"]{
-  --bg:#0e1412; --surface:#161e1b; --sunk:#111816; --ink:#e4ece9; --muted:#91a29b; --line:#26322e;
-  --accent:#52bfa3; --accent-ink:#062019; --accent-soft:#1a3530;
-  --good:#5cc47e; --bad:#f07a70; --warn:#e3a94a; --warn-soft:#3a2c14; color-scheme:dark;}
+
+/* Amethyst: purple */
+:root[data-palette="amethyst"]{--bg:#f3f0f7; --surface:#ffffff; --sunk:#e9e4f1; --ink:#1e1828; --muted:#665c75; --line:#dcd4e8;
+  --accent:#6b3fa0; --accent-ink:#ffffff; --accent-soft:#ece2f7; --hi:#8a4fd0;}
+@media (prefers-color-scheme: dark){:root[data-palette="amethyst"]{--bg:#120e18; --surface:#1b1523; --sunk:#150f1c; --ink:#ece6f4; --muted:#a497b5; --line:#2e253a;
+  --accent:#b78ce8; --accent-ink:#1d0e30; --accent-soft:#2d2040; --hi:#c9a3f2;}}
+
+/* Gilded: gold */
+:root[data-palette="gilded"]{--bg:#f6f3ea; --surface:#fffdf7; --sunk:#eee8d8; --ink:#231d10; --muted:#6b6250; --line:#e2d9c2;
+  --accent:#8a6300; --accent-ink:#ffffff; --accent-soft:#f4e6bf; --hi:#b8860b;}
+@media (prefers-color-scheme: dark){:root[data-palette="gilded"]{--bg:#14110a; --surface:#1d1910; --sunk:#17130b; --ink:#f2ead6; --muted:#b0a382; --line:#332b1a;
+  --accent:#e0b84a; --accent-ink:#231a00; --accent-soft:#3a2f12; --hi:#f0c95c;}}
+
+/* Royal: purple with gold highlights */
+:root[data-palette="royal"]{--bg:#f2eff8; --surface:#ffffff; --sunk:#e8e3f2; --ink:#1c1630; --muted:#625a7a; --line:#d9d2e8;
+  --accent:#4b2a8c; --accent-ink:#ffffff; --accent-soft:#e6ddf6; --hi:#b8860b;}
+@media (prefers-color-scheme: dark){:root[data-palette="royal"]{--bg:#100c1c; --surface:#191329; --sunk:#130e21; --ink:#ebe6f7; --muted:#a39cbd; --line:#2b2442;
+  --accent:#a98bf0; --accent-ink:#150a33; --accent-soft:#2a2148; --hi:#e3b64c;}}
+
+/* Slate: neutral blue-grey */
+:root[data-palette="slate"]{--bg:#eff1f4; --surface:#ffffff; --sunk:#e4e8ee; --ink:#161b24; --muted:#5b6575; --line:#d5dbe4;
+  --accent:#34547e; --accent-ink:#ffffff; --accent-soft:#dde6f2; --hi:#34547e;}
+@media (prefers-color-scheme: dark){:root[data-palette="slate"]{--bg:#0f1217; --surface:#171b22; --sunk:#12151b; --ink:#e5e9ef; --muted:#9099a8; --line:#262c36;
+  --accent:#8fb1e0; --accent-ink:#0b1a2e; --accent-soft:#1f2a3a; --hi:#8fb1e0;}}
 
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-:root{color-scheme:light;padding-top:env(safe-area-inset-top, 0px);padding-bottom:env(safe-area-inset-bottom, 0px);-webkit-text-size-adjust:100%}
+:root{padding-top:env(safe-area-inset-top, 0px);padding-bottom:env(safe-area-inset-bottom, 0px);-webkit-text-size-adjust:100%}
 img{max-width:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
   padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));}
@@ -96,7 +118,7 @@ button{cursor:pointer}
 .money input{width:100%;text-align:right;border:1px solid var(--line);background:var(--sunk);border-radius:8px;padding:10px 10px 10px 26px;font-family:var(--f-num);font-size:1.05rem}
 .money input:focus{background:var(--surface);border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
 .daytotal{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-top:12px;border-top:2px solid var(--ink)}
-.daytotal strong{font-size:1.4rem}
+.daytotal strong{font-size:1.4rem;color:var(--hi)}
 .savebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .savebar .btn.primary{flex:1;min-width:180px}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
@@ -141,6 +163,45 @@ select{border:1px solid var(--line);background:var(--surface);border-radius:8px;
 .good{color:var(--good)} .bad{color:var(--bad)}
 .samplebar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--accent-soft);color:var(--accent);border-radius:var(--r);padding:10px 14px;font-size:.88rem;font-weight:600}
 
+/* Themes */
+.themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.themecard{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:10px;display:flex;flex-direction:column;gap:8px;text-align:left}
+.themecard[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.themecard .sw{display:flex;height:26px;border-radius:6px;overflow:hidden}
+.themecard .sw i{flex:1}
+.themecard b{font-weight:600;font-size:.9rem}
+
+/* Notes */
+.note label{display:block;font-weight:600;margin-bottom:6px}
+.note textarea{width:100%;min-height:44px;resize:vertical;border:1px solid var(--line);background:var(--sunk);border-radius:8px;padding:10px;font:inherit;color:inherit}
+.note textarea:focus{background:var(--surface);border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+.notelist{display:flex;flex-direction:column}
+.notelist button{all:unset;cursor:pointer;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;padding:10px 0;border-top:1px solid var(--line)}
+.notelist button:first-child{border-top:0}
+.notelist button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.notelist .when{font-family:var(--f-num);font-size:.82rem;color:var(--hi);white-space:nowrap;padding-top:1px}
+.notelist .what{min-width:0;overflow-wrap:anywhere}
+.chartkey{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+.chartkey span{display:inline-flex;align-items:center;gap:6px}
+.chartkey .ln{width:18px;border-top:2px dashed var(--muted)}
+.chartkey .mk{width:8px;height:8px;border-radius:50%;background:var(--hi)}
+
+/* Goals */
+.bar{height:6px;background:var(--sunk);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--hi);border-radius:3px}
+.tile.reached{border-color:var(--hi)}
+.tile.reached .d{color:var(--hi);font-weight:600}
+a.tile{color:inherit;text-decoration:none}
+.goalrow{display:grid;grid-template-columns:1fr minmax(120px,160px);gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.goalrow:first-child{border-top:0}
+.goalrow .lbl{display:flex;flex-direction:column;min-width:0}
+.goalrow .lbl b{font-weight:600}
+.goalrow .lbl span{font-size:.78rem;color:var(--muted)}
+.remind{border:1px solid var(--hi);background:var(--accent-soft)}
+.remind h2{color:var(--accent)}
+.fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:40}
+.toast.big{font-size:1rem;padding:14px 20px;border-radius:14px;background:var(--accent);color:var(--accent-ink)}
+
 @media (max-width:480px){
   .tiles{grid-template-columns:1fr 1fr}
   .tiles .tile:first-child{grid-column:1/-1}
@@ -159,16 +220,17 @@ select{border:1px solid var(--line);background:var(--surface);border-radius:8px;
       <a href="#today" data-view="today">Today</a>
       <a href="#charts" data-view="charts">Charts</a>
       <a href="#forecast" data-view="forecast">Forecast</a>
-      <a href="#sources" data-view="sources">Sources</a>
+      <a href="#settings" data-view="settings">Settings</a>
     </nav>
   </header>
 
   <div id="banner" class="banner" hidden></div>
-  <div id="backupNudge" class="banner row" hidden><span id="backupNudgeText"></span><a class="btn" href="#sources">Back up</a></div>
+  <div id="backupNudge" class="banner row" hidden><span id="backupNudgeText"></span><a class="btn" href="#settings">Back up</a></div>
   <div id="samplebar" class="samplebar" hidden><span>Showing sample numbers. Nothing here is saved.</span><button class="btn" id="exitSample" type="button">Back to real data</button></div>
 
   <!-- TODAY -->
   <section id="view-today" class="stack" hidden>
+    <form id="goalRemind" class="panel stack remind" hidden autocomplete="off"></form>
     <div class="panel stack">
       <div class="datebar">
         <button class="btn icon" id="prevDay" type="button" aria-label="Previous day">‹</button>
@@ -179,6 +241,8 @@ select{border:1px solid var(--line);background:var(--surface);border-radius:8px;
       <div class="daytitle"><h2 id="dayTitle">Today</h2><span class="pill" id="dayStatus">Not logged</span></div>
       <form id="entryForm" class="stack" autocomplete="off">
         <div class="entries" id="entries"></div>
+        <div class="note"><label for="dayNote">Note <span class="muted small" style="font-weight:400">(optional)</span></label>
+          <textarea id="dayNote" rows="1" maxlength="280" placeholder="e.g. new audiobook out, BookTok video took off"></textarea></div>
         <div class="daytotal"><h3>Day total</h3><strong class="num" id="dayTotal">$0.00</strong></div>
         <div class="savebar">
           <button class="btn primary" id="saveBtn" type="submit">Save day</button>
@@ -219,7 +283,12 @@ select{border:1px solid var(--line);background:var(--surface);border-radius:8px;
         <div style="text-align:right"><h3 id="prevLabel">Previous week</h3><div class="num" id="periodPrev">—</div></div>
       </div>
       <div class="chartbox"><canvas id="periodChart" aria-label="Earnings chart" role="img"></canvas></div>
+      <div class="chartkey" id="chartKey" hidden></div>
       <div id="chartEmpty" class="empty" hidden><p>Nothing logged in this period.</p></div>
+    </div>
+    <div class="panel stack" id="notesPanel" hidden>
+      <h3>Notes</h3>
+      <div class="notelist" id="noteList"></div>
     </div>
     <div class="panel stack">
       <h3>Breakdown by source</h3>
@@ -252,8 +321,18 @@ select{border:1px solid var(--line);background:var(--surface);border-radius:8px;
     <div id="fcBody" class="stack"></div>
   </section>
 
-  <!-- SOURCES -->
-  <section id="view-sources" class="stack" hidden>
+  <!-- SETTINGS -->
+  <section id="view-settings" class="stack" hidden>
+    <form class="panel stack" id="goalsCard" autocomplete="off">
+      <h2>Goals</h2>
+      <p class="muted small" style="margin:0">Set a target for this week (Sunday to Saturday), this month and this year. Leave a box empty for no goal. Progress shows on the Today screen.</p>
+      <div id="goalRows"></div>
+      <button class="btn primary" type="submit">Save goals</button>
+    </form>
+    <div class="panel stack">
+      <h2>Theme</h2>
+      <div class="themes" id="themes"></div>
+    </div>
     <div class="panel stack">
       <h2>Income sources</h2>
       <p class="muted small" style="margin:0">These are the boxes on the Today screen, in this order. Archiving a source hides it from Today but keeps its history in charts.</p>
@@ -308,13 +387,14 @@ const diffDays = (a,b) => Math.round((parseKey(b)-parseKey(a))/864e5);
 const monthStart = k => k.slice(0,8)+"01";
 const monthEnd = k => { const d=parseKey(monthStart(k)); d.setMonth(d.getMonth()+1); d.setDate(0); return keyOf(d); };
 const addMonths = (k,n) => { const d=parseKey(monthStart(k)); d.setMonth(d.getMonth()+n); return keyOf(d); };
-const weekStart = k => { const d=parseKey(k); const dow=(d.getDay()+6)%7; d.setDate(d.getDate()-dow); return keyOf(d); };
+const weekStart = k => { const d=parseKey(k); d.setDate(d.getDate()-d.getDay()); return keyOf(d); }; // weeks run Sunday to Saturday
 const fmtDate = (k, o) => parseKey(k).toLocaleDateString(undefined, o||{weekday:"short", month:"short", day:"numeric"});
 const fmtMonth = (k, short) => parseKey(k).toLocaleDateString(undefined, short?{month:"short", year:"2-digit"}:{month:"long", year:"numeric"});
 
 /* ---------- state ---------- */
 const state = {
   settings:null, settingsLoaded:false, monthsRaw:{}, monthsLoaded:false, realDays:{},
+  goals:{week:{}, month:{}, year:{}}, goalSkips:{}, celebrated:{}, noteDraft:"",
   sample:null, date:todayKey(), draft:{}, dirty:false, view:"today",
   range:"week", offset:0, mode:"stack", lookback:30, method:"flat", canWrite:true
 };
@@ -358,6 +438,10 @@ const store = {
     try{ const raw=localStorage.getItem(LSKEY); saved=raw?JSON.parse(raw):null; }catch(e){ storageOK=false; }
     state.settings = (saved && saved.settings) || defaultSettings();
     state.monthsRaw = (saved && saved.months) || {};
+    const g=(saved && saved.goals) || {};
+    state.goals = {week:g.week||{}, month:g.month||{}, year:g.year||{}};
+    state.goalSkips = (saved && saved.goalSkips) || {};
+    state.celebrated = (saved && saved.celebrated) || {};
     state.settingsLoaded=state.monthsLoaded=true; rebuildDays();
     if(!saved) this.writeLocal();
     try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
@@ -365,7 +449,7 @@ const store = {
   },
   writeLocal(){
     try{
-      localStorage.setItem(LSKEY, JSON.stringify({settings:state.settings, months:state.monthsRaw}));
+      localStorage.setItem(LSKEY, JSON.stringify({settings:state.settings, months:state.monthsRaw, goals:state.goals, goalSkips:state.goalSkips, celebrated:state.celebrated}));
       if(!storageOK){ storageOK=true; render(); }
     }catch(e){
       if(storageOK){ storageOK=false; toast("Couldn't save on this phone. Export a backup now."); }
@@ -397,7 +481,7 @@ async function shareOrDownload(name, text, type, title){
   return true;
 }
 async function exportBackup(){
-  const text=JSON.stringify({app:"earnings-daybook", version:1, exportedAt:new Date().toISOString(), settings:state.settings, months:state.monthsRaw}, null, 1);
+  const text=JSON.stringify({app:"earnings-daybook", version:2, exportedAt:new Date().toISOString(), settings:state.settings, months:state.monthsRaw, goals:state.goals}, null, 1);
   if(await shareOrDownload("earnings-backup-"+todayKey()+".json", text, "application/json", "Earnings Daybook backup")){
     try{ localStorage.setItem(BKEY, String(Date.now())); }catch(e){}
     toast("Backup made. Keep it in Files or iCloud Drive."); render();
@@ -410,7 +494,7 @@ function readImport(file){
     try{
       const d=JSON.parse(r.result);
       if(d.app!=="earnings-daybook" || !d.months || typeof d.months!=="object") throw new Error("not a backup");
-      pendingImport={settings:d.settings||null, months:d.months};
+      pendingImport={settings:d.settings||null, months:d.months, goals:d.goals||null};
       render(); $("#dataCard").scrollIntoView({block:"center"});
     }catch(e){ toast("That file isn't an Earnings Daybook backup."); }
   };
@@ -425,10 +509,12 @@ function applyImport(){
   }
   const months=JSON.parse(JSON.stringify(state.monthsRaw));
   for(const mid in d.months){
-    const inc=(d.months[mid]||{}).days||{};
+    const inc=(d.months[mid]||{}).days||{}, incNotes=(d.months[mid]||{}).notes||{};
     months[mid]=months[mid]||{days:{}}; months[mid].days=months[mid].days||{};
     for(const day in inc) months[mid].days[day]=inc[day];
+    if(Object.keys(incNotes).length){ months[mid].notes=months[mid].notes||{}; for(const day in incNotes) months[mid].notes[day]=incNotes[day]; }
   }
+  if(d.goals) for(const type of ["week","month","year"]) for(const key in (d.goals[type]||{})) if(state.goals[type][key]==null) state.goals[type][key]=d.goals[type][key];
   state.settings=s; state.monthsRaw=months; rebuildDays(); pendingImport=null;
   try{ store.writeLocal(); toast("Backup imported"); }catch(e){}
   state.dirty=false; $("#entries").dataset.date=""; render();
@@ -438,7 +524,7 @@ function saved_any_days(){ return Object.keys(state.realDays).length>0; }
 /* ---------- ui helpers ---------- */
 function setSync(t, warn){ const el=$("#syncState"); el.textContent=t; el.style.color = warn ? "var(--warn)" : ""; }
 function showBanner(t){ const b=$("#banner"); b.textContent=t; b.hidden=false; }
-let toastT; function toast(t){ const el=$("#toast"); el.textContent=t; el.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>el.hidden=true,2600); }
+let toastT; function toast(t, ms, big){ const el=$("#toast"); el.textContent=t; el.classList.toggle("big", !!big); el.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>el.hidden=true, ms||2600); }
 function el(tag, attrs, ...kids){
   const e=document.createElement(tag);
   for(const k in (attrs||{})){ const v=attrs[k]; if(k==="class") e.className=v; else if(k==="text") e.textContent=v; else if(k.startsWith("on")) e.addEventListener(k.slice(2),v); else if(v!==false && v!=null) e.setAttribute(k, v===true?"":v); }
@@ -450,9 +536,9 @@ function defaultSettings(){ return {currency:"USD", sources:SUGGESTED.map((n,i)=
 function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
 
 /* ---------- routing ---------- */
-const VIEWS=["today","charts","forecast","sources"];
+const VIEWS=["today","charts","forecast","settings"];
 function route(){
-  const h=(location.hash||"").slice(1);
+  let h=(location.hash||"").slice(1); if(h==="sources") h="settings";
   state.view = VIEWS.includes(h) ? h : "today";
   document.querySelectorAll(".tabs a").forEach(a=>{ if(a.dataset.view===state.view) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
   VIEWS.forEach(v=>$("#view-"+v).hidden = v!==state.view);
@@ -464,7 +550,98 @@ window.addEventListener("hashchange", route);
 function loadDraft(){
   const rec=days()[state.date]||{}; const d={};
   activeSources().forEach(s=>{ const v=rec[s.id]; d[s.id] = v ? (+v).toFixed(2) : ""; });
-  state.draft=d; state.dirty=false;
+  state.draft=d; state.noteDraft=noteFor(state.date); state.dirty=false;
+}
+function noteFor(k){
+  if(state.sample) return (state.sample.notes||{})[k]||"";
+  const m=state.monthsRaw[k.slice(0,7)]; return (m && m.notes && m.notes[k.slice(8)]) || "";
+}
+function notesBetween(a,b){ // [{k, text}] sorted by date
+  const out=[];
+  if(state.sample){ for(const k in (state.sample.notes||{})) if(k>=a&&k<=b) out.push({k, text:state.sample.notes[k]}); }
+  else for(const mid in state.monthsRaw){ const n=(state.monthsRaw[mid]||{}).notes||{}; for(const d in n){ const k=mid+"-"+d; if(k>=a&&k<=b&&n[d]) out.push({k, text:n[d]}); } }
+  return out.sort((x,y)=>x.k<y.k?-1:1);
+}
+
+/* ---------- goals ---------- */
+const GOAL_TYPES=["week","month","year"];
+function periodKey(type,k){ return type==="week" ? weekStart(k) : type==="month" ? k.slice(0,7) : k.slice(0,4); }
+function periodRange(type,key){
+  if(type==="week") return [key, addDays(key,6)];
+  if(type==="month") return [key+"-01", monthEnd(key+"-01")];
+  return [key+"-01-01", key+"-12-31"];
+}
+function prevPeriodKey(type,key){ return type==="week" ? addDays(key,-7) : type==="month" ? addMonths(key+"-01",-1).slice(0,7) : String(+key-1); }
+function goalName(type,key){
+  if(type==="week"){ const [a,b]=periodRange(type,key); return "Week of "+fmtDate(a,{month:"short",day:"numeric"})+" – "+fmtDate(b,{month:"short",day:"numeric"}); }
+  if(type==="month") return parseKey(key+"-01").toLocaleDateString(undefined,{month:"long", year:"numeric"});
+  return key;
+}
+const goalNoun = type => type==="week" ? "weekly" : type==="month" ? "monthly" : "yearly";
+const goalOf = (type,key) => { const v=(state.sample?{}:state.goals[type]||{})[key]; return v>0 ? v : null; };
+function goalProgress(type, onKey){
+  const key=periodKey(type,onKey), [a,b]=periodRange(type,key), goal=goalOf(type,key);
+  const t=todayKey(), upto = b<t ? b : t;
+  const total=sumRange(a, upto).total;
+  const elapsed=Math.max(1, diffDays(a, upto)+1), len=diffDays(a,b)+1;
+  return {type, key, goal, total, pace: total/elapsed*len, pct: goal ? total/goal : 0, reached: !!goal && total>=goal};
+}
+function setGoals(values){ // {type: number|null} for the current periods
+  const t=todayKey();
+  for(const type in values){ const key=periodKey(type,t), v=values[type];
+    if(v>0) state.goals[type][key]=v; else delete state.goals[type][key];
+    delete state.goalSkips[type+":"+key]; }
+  try{ store.writeLocal(); }catch(e){}
+}
+function checkGoals(savedKey){
+  const hits=[];
+  GOAL_TYPES.forEach(type=>{
+    const p=goalProgress(type, savedKey); if(!p.reached) return;
+    const id=type+":"+p.key+":"+p.goal; if(state.celebrated[id]) return;
+    state.celebrated[id]=true; hits.push(p);
+  });
+  if(!hits.length) return;
+  try{ store.writeLocal(); }catch(e){}
+  const names=hits.map(h=>goalNoun(h.type));
+  const lead = names.length===1 ? names[0][0].toUpperCase()+names[0].slice(1)+" goal reached!" : "Goals reached: "+names.join(", ")+"!";
+  const h=hits[hits.length-1];
+  fireworks();
+  toast(lead+" "+money(h.total)+" of "+money(h.goal), 4500, true);
+}
+
+/* ---------- fireworks ---------- */
+function fireworks(){
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const c=document.createElement("canvas"); c.className="fx"; document.body.append(c);
+  const dpr=Math.min(2, window.devicePixelRatio||1), W=innerWidth, H=innerHeight;
+  c.width=W*dpr; c.height=H*dpr; const ctx=c.getContext("2d"); ctx.scale(dpr,dpr);
+  const colors=[cssVar("--accent"), cssVar("--hi"), "#f5c542", "#ff7aa8", "#7cc8ff", "#b78ce8", "#ffffff"];
+  const parts=[], rockets=[];
+  const launch=(delay)=>setTimeout(()=>{
+    const x=W*(0.15+Math.random()*0.7), y=H*(0.15+Math.random()*0.3);
+    rockets.push({x, y:H, tx:x, ty:y, vy:-(H-y)/26, color:colors[Math.floor(Math.random()*colors.length)]});
+  }, delay);
+  [0,280,560,900,1200,1500,1850].forEach(launch);
+  const burst=(x,y,color)=>{
+    const n=70, alt=colors[Math.floor(Math.random()*colors.length)];
+    for(let i=0;i<n;i++){ const a=Math.PI*2*i/n+Math.random()*0.1, s=2.2+Math.random()*3.4;
+      parts.push({x,y,px:x,py:y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:55+Math.random()*35,age:0,color:i%3?color:alt}); }
+  };
+  const start=performance.now();
+  (function frame(now){
+    ctx.clearRect(0,0,W,H);
+    for(let i=rockets.length-1;i>=0;i--){ const r=rockets[i];
+      ctx.strokeStyle=r.color; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(r.x,r.y); r.y+=r.vy; ctx.lineTo(r.x,r.y+10); ctx.stroke();
+      if(r.y<=r.ty){ burst(r.x,r.y,r.color); rockets.splice(i,1); } }
+    for(let i=parts.length-1;i>=0;i--){ const p=parts[i];
+      p.px=p.x; p.py=p.y; p.vx*=0.975; p.vy=p.vy*0.975+0.05; p.x+=p.vx; p.y+=p.vy; p.age++;
+      const alpha=Math.max(0,1-p.age/p.life);
+      ctx.globalAlpha=alpha; ctx.strokeStyle=p.color; ctx.lineWidth=2.2; ctx.lineCap="round";
+      ctx.beginPath(); ctx.moveTo(p.px,p.py); ctx.lineTo(p.x,p.y); ctx.stroke();
+      if(p.age>=p.life) parts.splice(i,1); }
+    ctx.globalAlpha=1;
+    if(now-start<2200 || rockets.length || parts.length) requestAnimationFrame(frame); else c.remove();
+  })(start);
 }
 function lastValue(id, beforeKey){
   const D=days(); let best=null;
@@ -510,6 +687,9 @@ function renderToday(){
     }
     $("#saveBtn").disabled = !state.canWrite;
   }
+  const noteEl=$("#dayNote");
+  if(document.activeElement!==noteEl && noteEl.value!==state.noteDraft) noteEl.value=state.noteDraft;
+  noteEl.disabled=!!state.sample;
   let tot=0; for(const id in state.draft){ const v=parseAmount(state.draft[id]); if(isFinite(v)) tot+=v; }
   $("#dayTotal").textContent=money(tot);
   $("#saveBtn").textContent = state.sample ? "Saving is off for sample data" : logged&&!state.dirty ? "Save again" : "Save "+(rel?rel.toLowerCase():fmtDate(state.date,{month:"short",day:"numeric"}));
@@ -521,16 +701,64 @@ function renderToday(){
   $("#missingWrap").hidden = !miss.length;
   $("#missing").replaceChildren(...miss.map(k=>el("button",{class:"chip", type:"button", text: k===t?"Today":fmtDate(k,{weekday:"short",month:"short",day:"numeric"}), onclick:()=>goDate(k)})));
 
-  // summary tiles
-  const w=sumRange(weekStart(t), t), m=sumRange(monthStart(t), t), y=sumRange(t.slice(0,4)+"-01-01", t);
+  // summary tiles, with goal progress where a goal is set
+  const m=sumRange(monthStart(t), t);
   const pm=sumRange(addMonths(t,-1), addDays(addMonths(t,-1), diffDays(monthStart(t), t)));
   const ch = pm.total>0 ? (m.total-pm.total)/pm.total : null;
-  $("#tiles").replaceChildren(
-    tile("This week", money(w.total), "Since Monday"),
-    tile("This month", money(m.total), ch==null ? fmtMonth(t) : el("span",{class: ch>=0?"up":"down", text:(ch>=0?"▲ ":"▼ ")+Math.abs(ch*100).toFixed(0)+"% vs same days last month"})),
-    tile("This year", money(y.total), t.slice(0,4)+" so far"));
+  const plain={week:"Since Sunday", month: ch==null ? fmtMonth(t) : el("span",{class: ch>=0?"up":"down", text:(ch>=0?"▲ ":"▼ ")+Math.abs(ch*100).toFixed(0)+"% vs same days last month"}), year:t.slice(0,4)+" so far"};
+  const labels={week:"This week", month:"This month", year:"This year"};
+  $("#tiles").replaceChildren(...GOAL_TYPES.map(type=>{
+    const p=goalProgress(type,t);
+    if(!p.goal) return tile(labels[type], money(p.total), plain[type]);
+    const desc = p.reached ? "Goal reached · "+money(p.goal) : Math.floor(p.pct*100)+"% of "+money(p.goal,true)+" · on pace for "+money(p.pace,true);
+    const tl=tile(labels[type], money(p.total), desc, Math.min(1,p.pct));
+    if(p.reached) tl.classList.add("reached");
+    return tl;
+  }));
+  renderReminder();
 }
-function tile(label, value, desc){ return el("div",{class:"tile"}, el("h3",{text:label}), el("div",{class:"v", text:value}), el("div",{class:"d"}, desc)); }
+function tile(label, value, desc, progress){
+  return el("div",{class:"tile"}, el("h3",{text:label}), el("div",{class:"v", text:value}),
+    progress!=null ? el("div",{class:"bar", role:"progressbar", "aria-valuemin":"0", "aria-valuemax":"100", "aria-valuenow":String(Math.round(progress*100))}, el("i",{style:"width:"+(progress*100).toFixed(1)+"%"})) : null,
+    el("div",{class:"d"}, desc));
+}
+function renderReminder(){
+  const form=$("#goalRemind"), t=todayKey();
+  if(state.sample){ form.hidden=true; return; }
+  const missing=GOAL_TYPES.filter(type=>{ const key=periodKey(type,t); return !goalOf(type,key) && !state.goalSkips[type+":"+key]; });
+  if(!missing.length){ form.hidden=true; form.dataset.sig=""; return; }
+  const sig=missing.join(",")+"|"+t;
+  form.hidden=false;
+  if(form.dataset.sig===sig) return; // don't wipe what she's typing
+  form.dataset.sig=sig;
+  const d=parseKey(t), isSun=d.getDay()===0, isFirst=d.getDate()===1, isNewYear=isFirst&&d.getMonth()===0;
+  const title = isNewYear&&missing.includes("year") ? "Happy new year! Set this year's goal."
+    : isFirst&&missing.includes("month") ? "A new month. Set this month's goal."
+    : isSun&&missing.includes("week") ? "It's Sunday. Set this week's goal."
+    : "Set your goals";
+  const sym=curSymbol(), names={week:"This week", month:"This month", year:"This year"};
+  form.replaceChildren(
+    el("h2",{text:title}),
+    el("div",{}, missing.map(type=>{
+      const key=periodKey(type,t), last=goalOf(type, prevPeriodKey(type,key));
+      return el("div",{class:"goalrow"},
+        el("label",{class:"lbl", for:"rg-"+type}, el("b",{text:names[type]}), el("span",{text: last ? "Last "+type+": "+money(last,true) : goalName(type,key)})),
+        el("div",{class:"money"}, el("span",{text:sym}), el("input",{type:"text", inputmode:"decimal", id:"rg-"+type, "data-type":type, placeholder:"No goal", value: last ? String(last) : "", "aria-label":names[type]+" goal"})));
+    })),
+    el("div",{class:"row"},
+      el("button",{class:"btn primary", type:"submit", style:"flex:1", text:"Set goals"}),
+      el("button",{class:"btn", type:"button", text:"Not now", onclick:()=>{ missing.forEach(type=>{ state.goalSkips[type+":"+periodKey(type,t)]=true; }); try{ store.writeLocal(); }catch(e){} render(); }})));
+}
+$("#goalRemind").addEventListener("submit", e=>{
+  e.preventDefault();
+  const vals={}; let bad=false;
+  e.target.querySelectorAll("input[data-type]").forEach(i=>{ const v=parseAmount(i.value); if(!isFinite(v)) bad=true; vals[i.dataset.type]=isFinite(v)&&v>0?v:null; });
+  if(bad){ toast("Use numbers only for goals."); return; }
+  // an empty box here means "skip this period", not "delete"
+  const t=todayKey();
+  for(const type in vals){ if(!vals[type]){ state.goalSkips[type+":"+periodKey(type,t)]=true; delete vals[type]; } }
+  setGoals(vals); toast("Goals set"); render();
+});
 function goDate(k){
   if(k>todayKey()) k=todayKey();
   state.date=k; loadDraft(); $("#entries").dataset.date=""; render();
@@ -547,6 +775,7 @@ $("#entries").addEventListener("input", e=>{
   e.target.setCustomValidity(isFinite(parseAmount(e.target.value))?"":"Enter a number");
   renderToday();
 });
+$("#dayNote").addEventListener("input", e=>{ state.noteDraft=e.target.value; state.dirty=true; renderToday(); });
 $("#entries").addEventListener("focusin", e=>{ if(e.target.select) setTimeout(()=>e.target.select(),0); });
 $("#entries").addEventListener("keydown", e=>{
   if(e.key!=="Enter") return; e.preventDefault();
@@ -563,6 +792,8 @@ $("#entryForm").addEventListener("submit", async e=>{
   const mid=k.slice(0,7), d=k.slice(8);
   const body=JSON.parse(JSON.stringify(state.monthsRaw[mid]||{days:{}})); body.days=body.days||{};
   body.days[d]=amounts; body.updatedAt=new Date().toISOString();
+  const note=(state.noteDraft||"").trim();
+  if(note){ body.notes=body.notes||{}; body.notes[d]=note; } else if(body.notes){ delete body.notes[d]; }
   const btn=$("#saveBtn"); btn.disabled=true;
   const before=state.monthsRaw[mid];
   try{
@@ -570,6 +801,7 @@ $("#entryForm").addEventListener("submit", async e=>{
     state.dirty=false; $("#entries").dataset.date="";
     toast("Saved "+fmtDate(k,{month:"short",day:"numeric"})+" · "+money(sumObj(amounts)));
     if(document.activeElement) document.activeElement.blur();
+    checkGoals(k);
   }catch(err){ if(before) state.monthsRaw[mid]=before; else delete state.monthsRaw[mid]; rebuildDays(); writeError(err); }
   render();
 });
@@ -587,16 +819,33 @@ function periodLabel(b){
   if(state.range==="month") return fmtMonth(b.s);
   return b.s.slice(0,4);
 }
-function chartTheme(){ return {ink:cssVar("--ink"), muted:cssVar("--muted"), line:cssVar("--line"), accent:cssVar("--accent"), surface:cssVar("--surface"), font:"Inter, system-ui, sans-serif"}; }
-function baseOptions(th, stacked){
+function chartTheme(){ return {ink:cssVar("--ink"), muted:cssVar("--muted"), line:cssVar("--line"), accent:cssVar("--accent"), hi:cssVar("--hi"), surface:cssVar("--surface"), font:"Inter, system-ui, sans-serif"}; }
+// small dots above bars that have a note
+function noteMarkers(indices, color){
+  return {id:"noteMarkers", afterDatasetsDraw(chart){
+    if(!indices.size) return;
+    const {ctx, chartArea, scales:{x}} = chart;
+    ctx.save(); ctx.fillStyle=color;
+    indices.forEach(i=>{ const px=x.getPixelForValue(i); ctx.beginPath(); ctx.arc(px, chartArea.top-7, 3.5, 0, Math.PI*2); ctx.fill(); });
+    ctx.restore();
+  }};
+}
+const clip = (s,n) => s.length>n ? s.slice(0,n-1)+"…" : s;
+function baseOptions(th, stacked, extraFooter){
   return {
     responsive:true, maintainAspectRatio:false, animation:false,
+    layout:{padding:{top:14}},
     interaction:{mode:"index", intersect:false},
     plugins:{
       legend:{display:false},
       tooltip:{backgroundColor:th.ink, titleColor:th.surface, bodyColor:th.surface, footerColor:th.surface, padding:10, boxPadding:4,
         filter:i=>i.raw>0,
-        callbacks:{label:c=>" "+c.dataset.label+": "+money(c.raw), footer:items=>items.length>1?"Total: "+money(items.reduce((a,i)=>a+(+i.raw||0),0)):""}}
+        callbacks:{label:c=>" "+c.dataset.label+": "+money(c.raw), footer:items=>{
+          const bars=items.filter(i=>i.dataset.type!=="line"), lines=[];
+          if(bars.length>1) lines.push("Total: "+money(bars.reduce((a,i)=>a+(+i.raw||0),0)));
+          if(extraFooter && items.length) lines.push(...extraFooter(items[0].dataIndex));
+          return lines;
+        }}}
     },
     scales:{
       x:{stacked, grid:{display:false}, ticks:{color:th.muted, font:{family:th.font, size:11}, maxRotation:0, autoSkipPadding:6}, border:{color:th.line}},
@@ -627,12 +876,38 @@ function renderCharts(){
   const datasets = state.mode==="total"
     ? [{label:"Total", data:buckets.map(x=>Math.round(x.total*100)/100), backgroundColor:th.accent, borderRadius:4, maxBarThickness:48}]
     : srcs.map((s,i)=>({label:s.name, data:buckets.map(x=>Math.round((x.per[s.id]||0)*100)/100), backgroundColor:s.color, borderRadius: i===srcs.length-1?4:0, maxBarThickness:48}));
-  const has = cur.total>0;
+  // same months last year, as a dashed line on the Year view
+  let lastYear=null;
+  if(state.range==="year"){
+    const first=Object.keys(D).sort()[0]||"9999";
+    const ly=buckets.map(bk=>{ const s=addMonths(bk.s,-12); return monthEnd(s)<first ? null : Math.round(sumRange(s, monthEnd(s)).total*100)/100; });
+    if(ly.some(v=>v>0)){
+      lastYear=+b.s.slice(0,4)-1;
+      datasets.push({type:"line", label:String(lastYear), data:ly, stack:"lastyear", order:-1, borderColor:th.muted, borderDash:[5,4], borderWidth:2,
+        pointRadius:2.5, pointBackgroundColor:th.muted, pointBorderWidth:0, tension:0.25, fill:false});
+    }
+  }
+  // notes in this period: marker indices and tooltip lines
+  const periodNotes=notesBetween(b.s, b.e);
+  const noteIdx=new Set(), notesByIdx={};
+  buckets.forEach((bk,i)=>{ const ns=periodNotes.filter(n=>n.k>=bk.s && n.k<=bk.e); if(ns.length){ noteIdx.add(i); notesByIdx[i]=ns; } });
+  const footerNotes = i => { const ns=notesByIdx[i]; if(!ns) return [];
+    return state.range==="year" ? ns.slice(0,3).map(n=>"• "+fmtDate(n.k,{month:"short",day:"numeric"})+": "+clip(n.text,50)).concat(ns.length>3?["+ "+(ns.length-3)+" more"]:[]) : ["Note: "+clip(ns[0].text,70)]; };
+
+  const has = cur.total>0 || !!lastYear;
   $("#chartEmpty").hidden = has; $("#periodChart").parentElement.hidden = !has;
   if(periodChart){ periodChart.destroy(); periodChart=null; }
   if(has && window.Chart){
-    periodChart=new Chart($("#periodChart"), {type:"bar", data:{labels:buckets.map(x=>x.label), datasets}, options:baseOptions(th, true)});
+    periodChart=new Chart($("#periodChart"), {type:"bar", data:{labels:buckets.map(x=>x.label), datasets}, options:baseOptions(th, true, footerNotes), plugins:[noteMarkers(noteIdx, th.hi)]});
   }
+  const key=$("#chartKey");
+  key.replaceChildren(...[
+    lastYear ? el("span",{}, el("i",{class:"ln"}), "Same month in "+lastYear) : null,
+    noteIdx.size ? el("span",{}, el("i",{class:"mk"}), "Has a note") : null].filter(Boolean));
+  key.hidden = !has || (!lastYear && !noteIdx.size);
+  $("#notesPanel").hidden = !periodNotes.length;
+  $("#noteList").replaceChildren(...periodNotes.map(n=>el("button",{type:"button", onclick:()=>{ location.hash="#today"; goDate(n.k); }},
+    el("span",{class:"when", text:fmtDate(n.k,{weekday:"short", month:"short", day:"numeric"})}), el("span",{class:"what", text:n.text}))));
 
   // breakdown table
   const rows = sources().map(s=>({s, v:cur.per[s.id]||0, p:prev.per[s.id]||0})).filter(r=>r.v||r.p||!r.s.archived).sort((a,b)=>b.v-a.v);
@@ -722,7 +997,7 @@ function renderForecast(){
   const th=chartTheme();
   const chartPanel=el("div",{class:"panel stack"},
     el("div",{class:"row"}, el("h3",{text:"Monthly earnings"}), el("span",{class:"spacer"}),
-      el("span",{class:"small muted row", style:"gap:6px"}, el("i",{class:"dot", style:"background:"+th.accent}), "Actual", el("i",{class:"dot", style:"background:"+th.accent+";opacity:.35;margin-left:8px"}), "Projected")),
+      el("span",{class:"small muted row", style:"gap:6px"}, el("i",{class:"dot", style:"background:"+th.accent}), "Actual", el("i",{class:"dot", style:"background:"+th.hi+";opacity:.5;margin-left:8px"}), "Projected")),
     el("div",{class:"chartbox"}, el("canvas",{id:"fcCanvas", role:"img", "aria-label":"Actual and projected monthly earnings"})));
 
   // per-source table
@@ -741,14 +1016,57 @@ function renderForecast(){
     opts.scales.x.ticks.autoSkip=true; opts.scales.x.ticks.maxTicksLimit=8;
     fcChart=new Chart($("#fcCanvas"), {type:"bar", data:{labels, datasets:[
       {label:"Actual", data:actual, backgroundColor:th.accent, maxBarThickness:28},
-      {label:"Projected", data:proj, backgroundColor:th.accent+"55", borderColor:th.accent, borderWidth:{top:1.5,left:0,right:0,bottom:0}, borderDash:[3,3], maxBarThickness:28}
+      {label:"Projected", data:proj, backgroundColor:th.hi+"66", borderColor:th.hi, borderWidth:{top:1.5,left:0,right:0,bottom:0}, maxBarThickness:28}
     ]}, options:opts});
   }
 }
 $("#lookSeg").onclick=e=>{ const v=+e.target.dataset.look; if(v){ state.lookback=v; savePrefs(); render(); } };
 $("#methodSeg").onclick=e=>{ const m=e.target.dataset.method; if(m){ state.method=m; savePrefs(); render(); } };
 
-/* ---------- SOURCES ---------- */
+/* ---------- SETTINGS: goals ---------- */
+function renderGoalsCard(){
+  const form=$("#goalsCard"), rows=$("#goalRows"), t=todayKey();
+  if(form.contains(document.activeElement) && document.activeElement.tagName==="INPUT") return; // she's typing
+  const sym=curSymbol(), names={week:"This week", month:"This month", year:"This year"};
+  rows.replaceChildren(...GOAL_TYPES.map(type=>{
+    const p=goalProgress(type,t);
+    const sub = p.goal ? goalName(type,p.key)+" · "+money(p.total,true)+" so far ("+Math.floor(p.pct*100)+"%)" : goalName(type,p.key)+" · "+money(p.total,true)+" so far";
+    return el("div",{class:"goalrow"},
+      el("label",{class:"lbl", for:"g-"+type}, el("b",{text:names[type]}), el("span",{text:sub})),
+      el("div",{class:"money"}, el("span",{text:sym}), el("input",{type:"text", inputmode:"decimal", id:"g-"+type, "data-type":type, placeholder:"No goal", value:p.goal?String(p.goal):"", "aria-label":names[type]+" goal", disabled:!!state.sample})));
+  }));
+}
+$("#goalsCard").addEventListener("submit", e=>{
+  e.preventDefault(); if(state.sample) return;
+  const vals={}; let bad=false;
+  e.target.querySelectorAll("input[data-type]").forEach(i=>{ const v=parseAmount(i.value); if(!isFinite(v)) bad=true; vals[i.dataset.type]=isFinite(v)&&v>0?v:null; });
+  if(bad){ toast("Use numbers only for goals."); return; }
+  setGoals(vals); if(document.activeElement) document.activeElement.blur();
+  toast("Goals saved"); render();
+});
+
+/* ---------- SETTINGS: theme ---------- */
+const THEMES=[
+  {key:"royal", name:"Royal", sw:["#4b2a8c","#b8860b","#f2eff8"]},
+  {key:"amethyst", name:"Amethyst", sw:["#6b3fa0","#c9a3f2","#f3f0f7"]},
+  {key:"gilded", name:"Gilded", sw:["#8a6300","#f0c95c","#f6f3ea"]},
+  {key:"evergreen", name:"Evergreen", sw:["#0d6b58","#52bfa3","#eef2f0"]},
+  {key:"slate", name:"Slate", sw:["#34547e","#8fb1e0","#eff1f4"]}
+];
+function currentTheme(){ return document.documentElement.getAttribute("data-palette") || "evergreen"; }
+function applyTheme(key){
+  if(key==="evergreen") document.documentElement.removeAttribute("data-palette"); else document.documentElement.setAttribute("data-palette", key);
+  try{ localStorage.setItem("earnings-daybook-theme", key); }catch(e){}
+  syncThemeColor();
+}
+function syncThemeColor(){ const m=$("#themeColor"); if(m) m.setAttribute("content", cssVar("--bg")||"#eef2f0"); }
+function renderThemes(){
+  const cur=currentTheme();
+  $("#themes").replaceChildren(...THEMES.map(th=>el("button",{class:"themecard", type:"button", "aria-pressed":String(th.key===cur), onclick:()=>{ applyTheme(th.key); }},
+    el("span",{class:"sw"}, th.sw.map(c=>el("i",{style:"background:"+c}))), el("b",{text:th.name}))));
+}
+
+/* ---------- SETTINGS: sources ---------- */
 function editSettings(mut){
   if(state.sample){ toast("Leave sample mode to change sources."); return; }
   const s=JSON.parse(JSON.stringify(state.settings||{currency:"USD", sources:[]}));
@@ -806,14 +1124,15 @@ function startSample(){
   for(let i=400;i>=0;i--){ const k=addDays(t,-i); const g=1+(400-i)/900; const wk=[0,5,6].includes(parseKey(k).getDay())?1.2:1; const rec={};
     for(const id in base) rec[id]=Math.round(base[id]*g*wk*(0.5+rnd())*100)/100;
     if(rnd()<0.08) rec.src5=Math.round(rec.src5*6*100)/100; D[k]=rec; }
-  state.sample={settings:st, days:D}; $("#samplebar").hidden=false; loadDraft(); $("#entries").dataset.date=""; render();
+  const notes={}; [[3,"New audiobook out"],[12,"BookTok video took off"],[27,"Shopify holiday sale"],[60,"Price promo on ebook 2"],[200,"Launched TikTok Shop"]].forEach(([n,txt])=>{ notes[addDays(t,-n)]=txt; });
+  state.sample={settings:st, days:D, notes}; $("#samplebar").hidden=false; loadDraft(); $("#entries").dataset.date=""; render();
 }
 $("#exitSample").onclick=()=>{ state.sample=null; $("#samplebar").hidden=true; loadDraft(); $("#entries").dataset.date=""; render(); };
 
 /* ---------- render ---------- */
 let lastSrcSig="";
 function render(){
-  const sig=activeSources().map(s=>s.id).join(",")+"|"+state.date+"|"+JSON.stringify(days()[state.date]||null);
+  const sig=activeSources().map(s=>s.id).join(",")+"|"+state.date+"|"+JSON.stringify(days()[state.date]||null)+"|"+noteFor(state.date);
   if(!state.dirty && sig!==lastSrcSig){ loadDraft(); }
   lastSrcSig=sig;
   // storage status, backup reminder and the Your data card
@@ -821,7 +1140,7 @@ function render(){
   const ban=$("#banner");
   ban.hidden=storageOK; if(!storageOK) ban.textContent="This phone isn't letting the Daybook save. If you're in a Private tab, open it in a normal tab or from your Home Screen. Export a backup so nothing is lost.";
   const lb=lastBackup(), nDays=Object.keys(state.realDays).length, stale=nDays>2 && (!lb || daysSince(lb)>=14);
-  $("#backupNudge").hidden = !stale || state.view==="sources" || !!state.sample;
+  $("#backupNudge").hidden = !stale || state.view==="settings" || !!state.sample;
   $("#backupNudgeText").textContent = lb ? "Your last backup was "+daysSince(lb)+" days ago." : "You haven't backed up your entries yet.";
   const lbd=lb?daysSince(lb):null, lbEl=$("#lastBackup");
   lbEl.textContent = lb ? (lbd===0?"Today":lbd===1?"Yesterday":lbd+" days ago") : "Never";
@@ -836,11 +1155,12 @@ function render(){
   if(state.view==="today") renderToday();
   else if(state.view==="charts"){ renderCharts(); if(!Object.keys(days()).length && !state.sample) $("#chartEmpty").replaceChildren(el("p",{text:"Charts fill in as days are logged."}), el("button",{class:"btn", type:"button", text:"Preview with sample numbers", onclick:startSample})); else $("#chartEmpty").replaceChildren(el("p",{text:"Nothing logged in this period."})); }
   else if(state.view==="forecast") renderForecast();
-  else if(state.view==="sources") renderSources();
+  else if(state.view==="settings"){ renderGoalsCard(); renderThemes(); renderSources(); }
 }
-// re-theme charts when the light/dark setting changes
-matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>render());
-new MutationObserver(()=>render()).observe(document.documentElement,{attributes:true, attributeFilter:["data-theme"]});
+// re-colour charts and the status bar when the theme or light/dark setting changes
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>{ syncThemeColor(); render(); });
+new MutationObserver(()=>render()).observe(document.documentElement,{attributes:true, attributeFilter:["data-palette"]});
+syncThemeColor();
 // roll "today" over at midnight if the page stays open
 let lastToday=todayKey();
 setInterval(()=>{ const t=todayKey(); if(t!==lastToday){ if(state.date===lastToday && !state.dirty) state.date=t; lastToday=t; render(); } }, 60000);

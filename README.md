@@ -16,14 +16,15 @@ It's served by GitHub Pages from the `main` branch, root folder, at `https://dan
 
 ## Daily use
 
-- **Today**: one box per source. Enter moves to the next box; Enter on the last box saves. Empty boxes count as 0. Use the arrows or date picker to fill in or fix past days; unlogged days from the last two weeks show as buttons.
-- **Charts**: week, month or year, split by source or as a total, with a breakdown table.
+- **Today**: one box per source, plus an optional note for the day. Enter moves to the next box; Enter on the last box saves. Empty boxes count as 0. Use the arrows or date picker to fill in or fix past days; unlogged days from the last two weeks show as buttons. The tiles at the bottom show this week, month and year, with progress bars when a goal is set.
+- **Goals**: weekly (Sunday to Saturday), monthly and yearly targets. Hitting one sets off fireworks. On a Sunday, the 1st of the month and New Year's Day, a card on Today asks for the new period's goal, prefilled with the last one; it stays until she sets it or taps "Not now".
+- **Charts**: week, month or year, split by source or as a total, with a breakdown table. Days with a note get a dot above the bar, and the period's notes are listed below. The Year view adds a dashed line for the same months last year.
 - **Forecast**: pick how much history to use (7 days to 1 year) and either a steady average or the recent trend.
-- **Sources**: add, rename, reorder or archive sources (archived ones keep their history), change currency, export a CSV.
+- **Settings**: goals, theme (Royal, Amethyst, Gilded, Evergreen, Slate; each follows the phone's light/dark mode), income sources (add, rename, reorder, archive), currency, CSV export and backups.
 
 ## Backups
 
-On the Sources tab, under **Your data**:
+On the Settings tab, under **Your data** (backups include notes and goals):
 - **Export backup** opens the share sheet. Choose **Save to Files** and put it in iCloud Drive.
 - **Import backup** reads a backup file and merges it in. Use it on a new phone or after clearing Safari.
 
