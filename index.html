@@ -117,6 +117,12 @@ button{cursor:pointer}
 .money span{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-family:var(--f-num);pointer-events:none}
 .money input{width:100%;text-align:right;border:1px solid var(--line);background:var(--sunk);border-radius:8px;padding:10px 10px 10px 26px;font-family:var(--f-num);font-size:1.05rem}
 .money input:focus{background:var(--surface);border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+.otrow{display:grid;grid-template-columns:1fr minmax(120px,160px);gap:12px;align-items:center}
+.otrow > input{min-width:0;border:1px solid var(--line);background:var(--sunk);border-radius:8px;padding:10px}
+.otrow > input:focus{background:var(--surface);border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+.tag{display:inline-block;font-size:.7rem;font-weight:600;padding:1px 7px;border-radius:99px;background:var(--accent-soft);color:var(--accent);margin-left:6px;vertical-align:1px}
+.addopts{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:.9rem}
+.addopts input[type=date]{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 8px}
 .daytotal{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-top:12px;border-top:2px solid var(--ink)}
 .daytotal strong{font-size:1.4rem;color:var(--hi)}
 .savebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
@@ -255,6 +261,19 @@ a.tile{color:inherit;text-decoration:none}
       <div class="daytitle"><h2 id="dayTitle">Today</h2><span class="pill" id="dayStatus">Not logged</span></div>
       <form id="entryForm" class="stack" autocomplete="off">
         <div class="entries" id="entries"></div>
+        <div id="oneTime">
+          <button class="btn ghost" type="button" id="otOpen">+ One-time income (book signing, event…)</button>
+          <div class="stack" id="otForm" hidden style="gap:8px">
+            <div class="otrow">
+              <input type="text" id="otName" placeholder="e.g. Book signing" aria-label="One-time income name" enterkeyhint="next">
+              <div class="money"><span id="otSym">$</span><input type="text" id="otAmt" inputmode="decimal" placeholder="0.00" aria-label="Amount" enterkeyhint="done"></div>
+            </div>
+            <div class="row">
+              <button class="btn" type="button" id="otAdd">Add to this day</button>
+              <button class="btn ghost" type="button" id="otCancel">Cancel</button>
+            </div>
+          </div>
+        </div>
         <div class="note"><label for="dayNote">Note <span class="muted small" style="font-weight:400">(optional)</span></label>
           <textarea id="dayNote" rows="3" maxlength="280" placeholder="e.g. new audiobook out, BookTok video took off"></textarea></div>
         <div class="daytotal"><h3>Day total</h3><strong class="num" id="dayTotal">$0.00</strong></div>
@@ -351,10 +370,20 @@ a.tile{color:inherit;text-decoration:none}
       <h2>Income sources</h2>
       <p class="muted small" style="margin:0">These are the boxes on the Today screen, in this order. Archiving a source hides it from Today but keeps its history in charts.</p>
       <div id="srcList"></div>
-      <form class="add" id="addForm">
-        <input type="text" id="addName" placeholder="Add a source, e.g. Patreon" aria-label="New source name">
-        <button class="btn" type="submit">Add</button>
+      <form class="stack" id="addForm" style="gap:8px">
+        <div class="add">
+          <input type="text" id="addName" placeholder="Add a source, e.g. Patreon" aria-label="New source name">
+          <button class="btn" type="submit">Add</button>
+        </div>
+        <div class="addopts">
+          <label><input type="checkbox" id="addOnce"> One-time event (shows on one day only)</label>
+          <input type="date" id="addOnceDate" aria-label="Event date" hidden>
+        </div>
       </form>
+      <div id="eventsWrap" class="stack" hidden style="gap:4px">
+        <h3 style="margin-top:8px">One-time events</h3>
+        <div id="eventList"></div>
+      </div>
     </div>
     <div class="panel stack">
       <h2>Preferences</h2>
@@ -411,6 +440,7 @@ a.tile{color:inherit;text-decoration:none}
             <li>Under each source it shows the last amount you entered and when.</li>
             <li>Use the arrows or the date box to go back and fill in or fix an earlier day. Saving a day again replaces what was there.</li>
             <li>Days from the last two weeks that haven't been logged show as buttons under the form. Tap one to jump to it.</li>
+            <li>Book signing or other one-off income? Tap <b>+ One-time income</b> under the boxes, type what it was and the amount, then save the day. It only shows on that day, not every day after.</li>
           </ul>
         </div>
       </details>
@@ -465,6 +495,7 @@ a.tile{color:inherit;text-decoration:none}
           <ul>
             <li>Add, rename or reorder sources under <b>Income sources</b>. Tap the colour square to change a source's chart colour.</li>
             <li><b>Archive</b> hides a source from Today but keeps its history in the charts. <b>Restore</b> brings it back.</li>
+            <li>Tick <b>One-time event</b> when adding a source to give it a single date. Events are listed separately with their date; tap the date to open that day. An event with no amount logged can be deleted. Events show in charts but are left out of the forecast.</li>
             <li>Pick a <b>Theme</b>; each one follows the phone's light or dark mode.</li>
           </ul>
         </div>
@@ -526,8 +557,9 @@ function savePrefs(){ try{ localStorage.setItem("daybook-prefs", JSON.stringify(
 
 const days = () => state.sample ? state.sample.days : state.realDays;
 const settings = () => state.sample ? state.sample.settings : state.settings;
-const sources = () => (settings() && Array.isArray(settings().sources)) ? settings().sources : [];
-const activeSources = () => sources().filter(s=>!s.archived);
+const sources = () => (settings() && Array.isArray(settings().sources)) ? settings().sources.filter(s=>!s.deleted) : [];
+// Sources shown on Today for the selected date: regular ones, plus one-time events dated that day
+const activeSources = () => sources().filter(s=>!s.archived && (!s.oneTime || s.day===state.date));
 const srcById = id => sources().find(s=>s.id===id);
 
 function money(v, compact){
@@ -970,7 +1002,7 @@ function renderToday(){
         return el("div",{class:"entry"},
           el("label",{for:"amt-"+s.id},
             el("span",{class:"name"}, el("i",{class:"dot", style:"background:"+s.color}), s.name),
-            el("span",{class:"hint", text: lv ? "Last: "+money(lv.v)+" on "+fmtDate(lv.k,{month:"short",day:"numeric"}) : "No entries yet"})),
+            el("span",{class:"hint", text: s.oneTime ? "One-time event" : lv ? "Last: "+money(lv.v)+" on "+fmtDate(lv.k,{month:"short",day:"numeric"}) : "No entries yet"})),
           el("div",{class:"money"}, el("span",{text:sym}), input));
       }));
       wrap.dataset.ids=ids; wrap.dataset.date=state.date;
@@ -1066,6 +1098,29 @@ $("#entries").addEventListener("input", e=>{
   e.target.setCustomValidity(isFinite(parseAmount(e.target.value))?"":"Enter a number");
   renderToday();
 });
+/* one-time income (book signings, events): a source that only exists on one date */
+function addOneTime(name, day){
+  const id=newId();
+  editSettings(s=>{ const used=s.sources.filter(x=>!x.deleted).map(x=>x.color); const color=PALETTE.find(c=>!used.includes(c))||PALETTE[s.sources.length%PALETTE.length];
+    s.sources.push({id, name, color, archived:false, oneTime:true, day}); });
+  return id;
+}
+function closeOneTime(){ $("#otForm").hidden=true; $("#otOpen").hidden=false; $("#otName").value=""; $("#otAmt").value=""; }
+$("#otOpen").onclick=()=>{ if(state.sample){ toast("Leave sample mode to add income."); return; } $("#otOpen").hidden=true; $("#otForm").hidden=false; $("#otSym").textContent=curSymbol(); $("#otName").focus(); };
+$("#otCancel").onclick=closeOneTime;
+$("#otAdd").onclick=()=>{
+  const name=$("#otName").value.trim(), amt=parseAmount($("#otAmt").value);
+  if(!name){ toast("Give it a name, like \"Book signing at Powell's\"."); $("#otName").focus(); return; }
+  if(!isFinite(amt)){ toast("Use numbers only for the amount."); $("#otAmt").focus(); return; }
+  const id=addOneTime(name, state.date);
+  state.draft[id]= amt ? amt.toFixed(2) : ""; state.dirty=true; closeOneTime();
+  $("#entries").dataset.ids=""; render();
+  const f=document.getElementById("amt-"+id); if(f && !amt) f.focus();
+  toast("Added "+name+". Save the day to keep the amount.");
+};
+$("#otName").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); $("#otAmt").focus(); } });
+$("#otAmt").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); $("#otAdd").click(); } });
+
 $("#dayNote").addEventListener("input", e=>{ state.noteDraft=e.target.value; state.dirty=true; renderToday(); });
 $("#entries").addEventListener("focusin", e=>{ if(e.target.select) setTimeout(()=>e.target.select(),0); });
 $("#entries").addEventListener("keydown", e=>{
@@ -1202,7 +1257,7 @@ function renderCharts(){
     el("span",{class:"when", text:fmtDate(n.k,{weekday:"short", month:"short", day:"numeric"})}), el("span",{class:"what", text:n.text}))));
 
   // breakdown table
-  const rows = sources().map(s=>({s, v:cur.per[s.id]||0, p:prev.per[s.id]||0})).filter(r=>r.v||r.p||!r.s.archived).sort((a,b)=>b.v-a.v);
+  const rows = sources().map(s=>({s, v:cur.per[s.id]||0, p:prev.per[s.id]||0})).filter(r=>r.v||r.p||(!r.s.archived && !r.s.oneTime)).sort((a,b)=>b.v-a.v);
   const tbl=$("#breakdown");
   tbl.replaceChildren(
     el("thead",{}, el("tr",{}, el("th",{text:"Source"}), el("th",{class:"r", text:periodLabel(b)}), el("th",{text:"Share"}), el("th",{class:"r", text:"Change"}))),
@@ -1229,7 +1284,9 @@ function buildModel(){
   if(!logged.length) return {n:0};
   const end=logged[logged.length-1], start=addDays(end, -(state.lookback-1));
   const win=logged.filter(k=>k>=start);
-  const ids=new Set(sources().map(s=>s.id)); win.forEach(k=>Object.keys(D[k]).forEach(id=>ids.add(id)));
+  // one-time events (book signings etc.) don't repeat, so they stay out of the projection
+  const once=new Set(((settings()||{}).sources||[]).filter(s=>s.oneTime).map(s=>s.id));
+  const ids=new Set(sources().filter(s=>!s.oneTime).map(s=>s.id)); win.forEach(k=>Object.keys(D[k]).forEach(id=>{ if(!once.has(id)) ids.add(id); }));
   const models={};
   ids.forEach(id=>{
     const xs=win.map(k=>diffDays(start,k)), ys=win.map(k=>+D[k][id]||0), n=xs.length;
@@ -1276,7 +1333,7 @@ function renderForecast(){
     tile(parseKey(t).toLocaleDateString(undefined,{month:"long"})+" on pace for", money(actualMonth.total+restMonth), money(actualMonth.total)+" earned so far"));
 
   const days_ = M.n===1?"day":"days";
-  const basis=el("p",{class:"muted small", style:"margin:0", text:"Based on "+M.n+" logged "+days_+" from "+fmtDate(M.firstDay,{month:"short",day:"numeric",year:"numeric"})+" to "+fmtDate(M.end,{month:"short",day:"numeric",year:"numeric"})+". Current pace: "+money(rate)+" a day."+(M.n<state.lookback && diffDays(M.firstDay,M.end)+1<state.lookback ? " That's less history than the period you picked, so the forecast uses what there is." : "")});
+  const basis=el("p",{class:"muted small", style:"margin:0", text:"Based on "+M.n+" logged "+days_+" from "+fmtDate(M.firstDay,{month:"short",day:"numeric",year:"numeric"})+" to "+fmtDate(M.end,{month:"short",day:"numeric",year:"numeric"})+". Current pace: "+money(rate)+" a day."+(M.n<state.lookback && diffDays(M.firstDay,M.end)+1<state.lookback ? " That's less history than the period you picked, so the forecast uses what there is." : "")+(sources().some(s=>s.oneTime) ? " One-time events aren't included, since they don't repeat." : "")});
 
   // chart: 12 months back (actual) + 12 forward (projected)
   const labels=[], actual=[], proj=[];
@@ -1411,22 +1468,46 @@ function renderSources(){
     return;
   }
   const active=document.activeElement && document.activeElement.id;
-  list.replaceChildren(...srcs.map((s,i)=>{
-    const name=el("input",{type:"text", id:"name-"+s.id, value:s.name, "aria-label":"Source name"});
+  const regular=srcs.filter(s=>!s.oneTime), events=srcs.filter(s=>s.oneTime).sort((a,b)=>a.day<b.day?1:-1);
+  // move a regular source past its regular neighbour (one-time events in between don't count)
+  const move=(id,dir)=>editSettings(st=>{ const a=st.sources, reg=a.map((x,j)=>j).filter(j=>!a[j].oneTime && !a[j].deleted), p=reg.findIndex(j=>a[j].id===id), q=p+dir;
+    if(p<0||q<0||q>=reg.length) return; const i=reg[p], j=reg[q]; [a[i],a[j]]=[a[j],a[i]]; });
+  const nameInput=s=>{ const name=el("input",{type:"text", id:"name-"+s.id, value:s.name, "aria-label":"Source name"});
     name.addEventListener("change", ()=>{ const v=name.value.trim(); if(v && v!==s.name) editSettings(st=>{ st.sources.find(x=>x.id===s.id).name=v; }); else name.value=s.name; });
-    const sw=el("button",{class:"swatch", type:"button", style:"background:"+s.color, "aria-label":"Change colour for "+s.name, title:"Change colour",
+    return name; };
+  const swatch=s=>el("button",{class:"swatch", type:"button", style:"background:"+s.color, "aria-label":"Change colour for "+s.name, title:"Change colour",
       onclick:()=>editSettings(st=>{ const x=st.sources.find(q=>q.id===s.id); const j=PALETTE.indexOf(x.color); x.color=PALETTE[(j+1)%PALETTE.length]; })});
+  list.replaceChildren(...regular.map((s,i)=>{
     const acts=el("div",{class:"acts"},
-      el("button",{class:"btn icon", type:"button", "aria-label":"Move "+s.name+" up", disabled:i===0, text:"↑", onclick:()=>editSettings(st=>{ const a=st.sources; [a[i-1],a[i]]=[a[i],a[i-1]]; })}),
-      el("button",{class:"btn icon", type:"button", "aria-label":"Move "+s.name+" down", disabled:i===srcs.length-1, text:"↓", onclick:()=>editSettings(st=>{ const a=st.sources; [a[i+1],a[i]]=[a[i],a[i+1]]; })}),
+      el("button",{class:"btn icon", type:"button", "aria-label":"Move "+s.name+" up", disabled:i===0, text:"↑", onclick:()=>move(s.id,-1)}),
+      el("button",{class:"btn icon", type:"button", "aria-label":"Move "+s.name+" down", disabled:i===regular.length-1, text:"↓", onclick:()=>move(s.id,1)}),
       el("button",{class:"btn", type:"button", text:s.archived?"Restore":"Archive", onclick:()=>editSettings(st=>{ const x=st.sources.find(q=>q.id===s.id); x.archived=!x.archived; })}));
-    return el("div",{class:"srcrow"+(s.archived?" archived":"")}, sw, name, acts);
+    return el("div",{class:"srcrow"+(s.archived?" archived":"")}, swatch(s), nameInput(s), acts);
+  }));
+  $("#eventsWrap").hidden=!events.length;
+  $("#eventList").replaceChildren(...events.map(s=>{
+    let total=0; for(const k in state.realDays) total+=+(state.realDays[k][s.id]||0);
+    const go=el("button",{class:"btn", type:"button", text:fmtDate(s.day,{month:"short", day:"numeric", year:"numeric"}), title:"Open this day", onclick:()=>{ location.hash="#today"; goDate(s.day); }});
+    // only empty events can be deleted, so logged income never disappears from the history
+    const del = total ? el("span",{class:"num small muted", text:money(total)}) :
+      el("button",{class:"btn", type:"button", text:"Delete", onclick:()=>editSettings(st=>{ const x=st.sources.find(q=>q.id===s.id); x.deleted=true; })});
+    return el("div",{class:"srcrow"}, swatch(s), nameInput(s), el("div",{class:"acts"}, go, del));
   }));
   if(active && active.startsWith("name-")){ const f=document.getElementById(active); if(f) f.focus(); }
 }
+$("#addOnce").onchange=e=>{ const d=$("#addOnceDate"); d.hidden=!e.target.checked; if(!d.value) d.value=todayKey(); d.max=todayKey(); };
 $("#addForm").addEventListener("submit", e=>{
   e.preventDefault(); const v=$("#addName").value.trim(); if(!v) return;
-  editSettings(s=>{ const used=s.sources.map(x=>x.color); const color=PALETTE.find(c=>!used.includes(c))||PALETTE[s.sources.length%PALETTE.length]; s.sources.push({id:newId(), name:v, color, archived:false}); });
+  if($("#addOnce").checked){
+    const day=$("#addOnceDate").value||todayKey();
+    const id=addOneTime(v, day > todayKey() ? todayKey() : day);
+    $("#addName").value=""; $("#addOnce").checked=false; $("#addOnceDate").hidden=true;
+    toast("Added "+v+". Enter its amount on this day.");
+    location.hash="#today"; goDate(day > todayKey() ? todayKey() : day);
+    setTimeout(()=>{ const f=document.getElementById("amt-"+id); if(f) f.focus(); }, 50);
+    return;
+  }
+  editSettings(s=>{ const used=s.sources.filter(x=>!x.deleted).map(x=>x.color); const color=PALETTE.find(c=>!used.includes(c))||PALETTE[s.sources.length%PALETTE.length]; s.sources.push({id:newId(), name:v, color, archived:false}); });
   $("#addName").value=""; toast("Added "+v);
 });
 $("#currency").onchange=e=>editSettings(s=>{ s.currency=e.target.value; });
