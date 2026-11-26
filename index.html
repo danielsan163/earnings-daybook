@@ -1,0 +1,854 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Earnings Daybook</title>
+<meta name="theme-color" content="#eef2f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1412" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Daybook">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow working column; a sticky tab bar; the daily entry form is the first thing on screen. */
+:root{
+  --bg:#eef2f0; --surface:#ffffff; --sunk:#e4eae7; --ink:#15201c; --muted:#5a6a64; --line:#d3dcd8;
+  --accent:#0d6b58; --accent-ink:#ffffff; --accent-soft:#d6ece5;
+  --good:#1d7a3e; --bad:#b3261e; --warn:#9a5b00; --warn-soft:#fbeed6;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-num:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1412; --surface:#161e1b; --sunk:#111816; --ink:#e4ece9; --muted:#91a29b; --line:#26322e;
+  --accent:#52bfa3; --accent-ink:#062019; --accent-soft:#1a3530;
+  --good:#5cc47e; --bad:#f07a70; --warn:#e3a94a; --warn-soft:#3a2c14; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0e1412; --surface:#161e1b; --sunk:#111816; --ink:#e4ece9; --muted:#91a29b; --line:#26322e;
+  --accent:#52bfa3; --accent-ink:#062019; --accent-soft:#1a3530;
+  --good:#5cc47e; --bad:#f07a70; --warn:#e3a94a; --warn-soft:#3a2c14; color-scheme:dark;}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+:root{color-scheme:light;padding-top:env(safe-area-inset-top, 0px);padding-bottom:env(safe-area-inset-bottom, 0px);-webkit-text-size-adjust:100%}
+img{max-width:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top, 0px);z-index:10;background:var(--bg)}
+.wrap{max-width:720px;margin:0 auto;padding-block:12px 64px;display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:1.35rem;font-weight:700}
+h2{font-size:1.15rem;font-weight:700}
+h3{font-size:.78rem;font-family:var(--f-body);font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Top bar */
+.top{position:sticky;top:env(safe-area-inset-top, 0px);z-index:5;background:var(--bg);padding-block:10px 8px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand small{color:var(--muted);font-size:.82rem}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--sunk);padding:4px;border-radius:var(--r)}
+.tabs a{text-align:center;padding:8px 4px;border-radius:7px;color:var(--muted);text-decoration:none;font-weight:600;font-size:.9rem}
+.tabs a[aria-current="page"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+.banner{background:var(--warn-soft);color:var(--warn);border-radius:var(--r);padding:10px 14px;font-size:.88rem}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.spacer{flex:1}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
+
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 12px;font-weight:600}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);padding:12px 18px;font-size:1rem}
+.btn.primary:disabled{opacity:.55;cursor:default}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--accent);padding:6px 8px}
+.btn.icon{width:40px;height:40px;padding:0;display:grid;place-items:center;font-size:1.1rem}
+.seg{display:inline-flex;background:var(--sunk);border-radius:8px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:6px 11px;border-radius:6px;font-weight:600;font-size:.86rem;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+/* Today */
+.datebar{display:flex;gap:8px;align-items:center}
+.datebar input[type=date]{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 10px;height:40px}
+.daytitle{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.pill{font-size:.75rem;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--sunk);color:var(--muted);white-space:nowrap}
+.pill.saved{background:var(--accent-soft);color:var(--accent)}
+.pill.dirty{background:var(--warn-soft);color:var(--warn)}
+.entries{display:flex;flex-direction:column}
+.entry{display:grid;grid-template-columns:1fr minmax(120px,160px);gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.entry:first-child{border-top:0}
+.entry label{display:flex;flex-direction:column;gap:1px;min-width:0}
+.entry .name{display:flex;align-items:center;gap:8px;font-weight:600}
+.dot{width:10px;height:10px;border-radius:3px;flex:none}
+.entry .hint{font-size:.78rem;color:var(--muted);padding-left:18px}
+.money{position:relative}
+.money span{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-family:var(--f-num);pointer-events:none}
+.money input{width:100%;text-align:right;border:1px solid var(--line);background:var(--sunk);border-radius:8px;padding:10px 10px 10px 26px;font-family:var(--f-num);font-size:1.05rem}
+.money input:focus{background:var(--surface);border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+.daytotal{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-top:12px;border-top:2px solid var(--ink)}
+.daytotal strong{font-size:1.4rem}
+.savebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.savebar .btn.primary{flex:1;min-width:180px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px dashed var(--warn);color:var(--warn);background:transparent;border-radius:99px;padding:4px 10px;font-size:.82rem;font-weight:600}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tile .v{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:1.1rem;font-weight:500;overflow-wrap:anywhere}
+.tile .d{font-size:.78rem;color:var(--muted)}
+.up{color:var(--good)} .down{color:var(--bad)}
+
+/* Charts */
+.chartbox{position:relative;height:280px}
+.periodnav{display:flex;align-items:center;gap:8px}
+.periodnav strong{flex:1;text-align:center;font-family:var(--f-display);font-size:1.05rem}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th{font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+td.r,th.r{text-align:right}
+td .src{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.share{height:6px;background:var(--sunk);border-radius:3px;overflow:hidden;min-width:60px}
+.share i{display:block;height:100%}
+tfoot td{font-weight:600;border-bottom:0}
+
+/* Sources */
+.srcrow{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.srcrow:first-child{border-top:0}
+.srcrow input[type=text]{width:100%;min-width:0;border:1px solid var(--line);background:var(--sunk);border-radius:8px;padding:8px 10px}
+.srcrow.archived input[type=text]{color:var(--muted);text-decoration:line-through}
+.srcrow .acts{display:flex;gap:4px}
+.swatch{width:28px;height:28px;border-radius:7px;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line)}
+.add{display:flex;gap:8px}
+.add input{flex:1;min-width:0;border:1px solid var(--line);background:var(--sunk);border-radius:8px;padding:10px}
+select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 10px}
+
+.empty{text-align:center;padding:28px 12px;color:var(--muted);display:flex;flex-direction:column;gap:10px;align-items:center}
+.empty p{margin:0;max-width:42ch}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:99px;font-weight:600;font-size:.9rem;z-index:20;max-width:calc(100% - 32px);text-align:center}
+.banner.row{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.banner .btn{flex:none}
+.confirm{background:var(--accent-soft);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:10px;font-size:.9rem}
+.good{color:var(--good)} .bad{color:var(--bad)}
+.samplebar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--accent-soft);color:var(--accent);border-radius:var(--r);padding:10px 14px;font-size:.88rem;font-weight:600}
+
+@media (max-width:480px){
+  .tiles{grid-template-columns:1fr 1fr}
+  .tiles .tile:first-child{grid-column:1/-1}
+  .entry{grid-template-columns:1fr 130px}
+  .chartbox{height:240px}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><h1>Earnings Daybook</h1><small id="syncState">Connecting…</small></div>
+    <nav class="tabs" aria-label="Sections">
+      <a href="#today" data-view="today">Today</a>
+      <a href="#charts" data-view="charts">Charts</a>
+      <a href="#forecast" data-view="forecast">Forecast</a>
+      <a href="#sources" data-view="sources">Sources</a>
+    </nav>
+  </header>
+
+  <div id="banner" class="banner" hidden></div>
+  <div id="backupNudge" class="banner row" hidden><span id="backupNudgeText"></span><a class="btn" href="#sources">Back up</a></div>
+  <div id="samplebar" class="samplebar" hidden><span>Showing sample numbers. Nothing here is saved.</span><button class="btn" id="exitSample" type="button">Back to real data</button></div>
+
+  <!-- TODAY -->
+  <section id="view-today" class="stack" hidden>
+    <div class="panel stack">
+      <div class="datebar">
+        <button class="btn icon" id="prevDay" type="button" aria-label="Previous day">‹</button>
+        <input type="date" id="dateInput" aria-label="Date">
+        <button class="btn icon" id="nextDay" type="button" aria-label="Next day">›</button>
+        <button class="btn" id="todayBtn" type="button">Today</button>
+      </div>
+      <div class="daytitle"><h2 id="dayTitle">Today</h2><span class="pill" id="dayStatus">Not logged</span></div>
+      <form id="entryForm" class="stack" autocomplete="off">
+        <div class="entries" id="entries"></div>
+        <div class="daytotal"><h3>Day total</h3><strong class="num" id="dayTotal">$0.00</strong></div>
+        <div class="savebar">
+          <button class="btn primary" id="saveBtn" type="submit">Save day</button>
+          <button class="btn ghost" id="revertBtn" type="button" hidden>Undo changes</button>
+        </div>
+        <p class="muted small" style="margin:0">Leave a box empty for $0. Press Enter to jump to the next box; Enter on the last one saves.</p>
+      </form>
+    </div>
+    <div id="missingWrap" class="panel stack" hidden>
+      <h3>Days not logged yet</h3>
+      <div class="chips" id="missing"></div>
+    </div>
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <!-- CHARTS -->
+  <section id="view-charts" class="stack" hidden>
+    <div class="row">
+      <div class="seg" id="rangeSeg">
+        <button type="button" data-range="week">Week</button>
+        <button type="button" data-range="month">Month</button>
+        <button type="button" data-range="year">Year</button>
+      </div>
+      <span class="spacer"></span>
+      <div class="seg" id="modeSeg">
+        <button type="button" data-mode="stack">By source</button>
+        <button type="button" data-mode="total">Total</button>
+      </div>
+    </div>
+    <div class="panel stack">
+      <div class="periodnav">
+        <button class="btn icon" id="prevPeriod" type="button" aria-label="Previous period">‹</button>
+        <strong id="periodLabel">This week</strong>
+        <button class="btn icon" id="nextPeriod" type="button" aria-label="Next period">›</button>
+      </div>
+      <div class="row" style="justify-content:space-between">
+        <div><h3>Total</h3><div class="num" style="font-size:1.6rem" id="periodTotal">$0.00</div></div>
+        <div style="text-align:right"><h3 id="prevLabel">Previous week</h3><div class="num" id="periodPrev">—</div></div>
+      </div>
+      <div class="chartbox"><canvas id="periodChart" aria-label="Earnings chart" role="img"></canvas></div>
+      <div id="chartEmpty" class="empty" hidden><p>Nothing logged in this period.</p></div>
+    </div>
+    <div class="panel stack">
+      <h3>Breakdown by source</h3>
+      <div class="tablewrap"><table id="breakdown"></table></div>
+    </div>
+  </section>
+
+  <!-- FORECAST -->
+  <section id="view-forecast" class="stack" hidden>
+    <div class="panel stack">
+      <div class="stack" style="gap:8px">
+        <h3>Base the forecast on the last</h3>
+        <div class="seg" id="lookSeg">
+          <button type="button" data-look="7">7 days</button>
+          <button type="button" data-look="30">30 days</button>
+          <button type="button" data-look="90">90 days</button>
+          <button type="button" data-look="180">6 months</button>
+          <button type="button" data-look="365">1 year</button>
+        </div>
+      </div>
+      <div class="stack" style="gap:8px">
+        <h3>Method</h3>
+        <div class="seg" id="methodSeg">
+          <button type="button" data-method="flat">Steady average</button>
+          <button type="button" data-method="trend">Follow the trend</button>
+        </div>
+        <p class="muted small" style="margin:0" id="methodNote"></p>
+      </div>
+    </div>
+    <div id="fcBody" class="stack"></div>
+  </section>
+
+  <!-- SOURCES -->
+  <section id="view-sources" class="stack" hidden>
+    <div class="panel stack">
+      <h2>Income sources</h2>
+      <p class="muted small" style="margin:0">These are the boxes on the Today screen, in this order. Archiving a source hides it from Today but keeps its history in charts.</p>
+      <div id="srcList"></div>
+      <form class="add" id="addForm">
+        <input type="text" id="addName" placeholder="Add a source, e.g. Patreon" aria-label="New source name">
+        <button class="btn" type="submit">Add</button>
+      </form>
+    </div>
+    <div class="panel stack">
+      <h2>Preferences</h2>
+      <div class="row"><label for="currency" style="flex:1">Currency</label>
+        <select id="currency">
+          <option value="USD">US dollar ($)</option><option value="CAD">Canadian dollar ($)</option>
+          <option value="GBP">Pound sterling (£)</option><option value="EUR">Euro (€)</option>
+          <option value="AUD">Australian dollar ($)</option>
+        </select>
+      </div>
+      <div class="row"><span style="flex:1">Export every logged day as a spreadsheet (CSV)</span><button class="btn" id="exportBtn" type="button">Export CSV</button></div>
+    </div>
+    <div class="panel stack" id="dataCard">
+      <h2>Your data</h2>
+      <p class="muted small" style="margin:0">Entries are saved on this phone only. Export a backup every week or two and keep it in Files or iCloud Drive, so a new phone or cleared Safari data doesn't wipe it.</p>
+      <div class="row" style="justify-content:space-between"><span>Last backup</span><strong class="num" id="lastBackup">Never</strong></div>
+      <div id="importConfirm" class="confirm" hidden></div>
+      <div class="row">
+        <button class="btn primary" style="flex:1" id="backupBtn" type="button">Export backup</button>
+        <button class="btn" style="flex:1;padding:12px" id="importBtn" type="button">Import backup</button>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+      </div>
+    </div>
+  </section>
+</div>
+<div id="toast" class="toast" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function(){
+"use strict";
+const $ = (s, el=document) => el.querySelector(s);
+const PALETTE = ["#2f7fc1","#d9822b","#3d9a50","#c8446b","#8a5cd1","#1f9e96","#b5892a","#6b7a8f","#d0603a","#4f6fd6"];
+const SUGGESTED = ["Amazon ebooks","Audible","Shopify","TikTok Shop","YouTube","Meta"];
+const LSKEY = "earnings-daybook-local-v1";
+
+/* ---------- dates (always local calendar days, keyed YYYY-MM-DD) ---------- */
+const pad = n => String(n).padStart(2,"0");
+const keyOf = d => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const parseKey = k => { const [y,m,d]=k.split("-").map(Number); return new Date(y,m-1,d); };
+const addDays = (k,n) => { const d=parseKey(k); d.setDate(d.getDate()+n); return keyOf(d); };
+const todayKey = () => keyOf(new Date());
+const diffDays = (a,b) => Math.round((parseKey(b)-parseKey(a))/864e5);
+const monthStart = k => k.slice(0,8)+"01";
+const monthEnd = k => { const d=parseKey(monthStart(k)); d.setMonth(d.getMonth()+1); d.setDate(0); return keyOf(d); };
+const addMonths = (k,n) => { const d=parseKey(monthStart(k)); d.setMonth(d.getMonth()+n); return keyOf(d); };
+const weekStart = k => { const d=parseKey(k); const dow=(d.getDay()+6)%7; d.setDate(d.getDate()-dow); return keyOf(d); };
+const fmtDate = (k, o) => parseKey(k).toLocaleDateString(undefined, o||{weekday:"short", month:"short", day:"numeric"});
+const fmtMonth = (k, short) => parseKey(k).toLocaleDateString(undefined, short?{month:"short", year:"2-digit"}:{month:"long", year:"numeric"});
+
+/* ---------- state ---------- */
+const state = {
+  settings:null, settingsLoaded:false, monthsRaw:{}, monthsLoaded:false, realDays:{},
+  sample:null, date:todayKey(), draft:{}, dirty:false, view:"today",
+  range:"week", offset:0, mode:"stack", lookback:30, method:"flat", canWrite:true
+};
+try { const p=JSON.parse(localStorage.getItem("daybook-prefs")||"{}");
+  if(p.range) state.range=p.range; if(p.mode) state.mode=p.mode; if(p.lookback) state.lookback=p.lookback; if(p.method) state.method=p.method; } catch(e){}
+function savePrefs(){ try{ localStorage.setItem("daybook-prefs", JSON.stringify({range:state.range,mode:state.mode,lookback:state.lookback,method:state.method})); }catch(e){} }
+
+const days = () => state.sample ? state.sample.days : state.realDays;
+const settings = () => state.sample ? state.sample.settings : state.settings;
+const sources = () => (settings() && Array.isArray(settings().sources)) ? settings().sources : [];
+const activeSources = () => sources().filter(s=>!s.archived);
+const srcById = id => sources().find(s=>s.id===id);
+
+function money(v, compact){
+  const cur=(settings()&&settings().currency)||"USD";
+  try { return new Intl.NumberFormat(undefined,{style:"currency",currency:cur, maximumFractionDigits: compact?0:2, minimumFractionDigits: compact?0:2}).format(v||0); }
+  catch(e){ return "$"+(v||0).toFixed(2); }
+}
+function curSymbol(){
+  const cur=(settings()&&settings().currency)||"USD";
+  try { const p=new Intl.NumberFormat(undefined,{style:"currency",currency:cur}).formatToParts(0).find(x=>x.type==="currency"); return p?p.value:"$"; } catch(e){ return "$"; }
+}
+function parseAmount(s){
+  if(s==null) return 0; s=String(s).trim(); if(!s) return 0;
+  const n=parseFloat(s.replace(/[^0-9.\-]/g,""));
+  return isFinite(n) ? Math.round(n*100)/100 : NaN;
+}
+const sumObj = o => Object.values(o||{}).reduce((a,b)=>a+(+b||0),0);
+function sumRange(a,b){ // inclusive keys
+  const D=days(); let t=0; const per={};
+  for(const k in D){ if(k>=a && k<=b){ for(const id in D[k]){ const v=+D[k][id]||0; t+=v; per[id]=(per[id]||0)+v; } } }
+  return {total:t, per};
+}
+
+/* ---------- storage: this phone (localStorage), plus backup files ---------- */
+const BKEY = "earnings-daybook-last-backup";
+let storageOK = true;
+const store = {
+  init(){
+    let saved=null;
+    try{ const raw=localStorage.getItem(LSKEY); saved=raw?JSON.parse(raw):null; }catch(e){ storageOK=false; }
+    state.settings = (saved && saved.settings) || defaultSettings();
+    state.monthsRaw = (saved && saved.months) || {};
+    state.settingsLoaded=state.monthsLoaded=true; rebuildDays();
+    if(!saved) this.writeLocal();
+    try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
+    render();
+  },
+  writeLocal(){
+    try{
+      localStorage.setItem(LSKEY, JSON.stringify({settings:state.settings, months:state.monthsRaw}));
+      if(!storageOK){ storageOK=true; render(); }
+    }catch(e){
+      if(storageOK){ storageOK=false; toast("Couldn't save on this phone. Export a backup now."); }
+      throw e;
+    }
+  },
+  saveSettings(s){ state.settings=s; try{ this.writeLocal(); }catch(e){ return Promise.reject(e); } render(); return Promise.resolve(); },
+  saveMonth(id, body){ state.monthsRaw[id]=body; rebuildDays(); try{ this.writeLocal(); }catch(e){ return Promise.reject(e); } return Promise.resolve(); }
+};
+function rebuildDays(){
+  const out={};
+  for(const mid in state.monthsRaw){ const ds=(state.monthsRaw[mid]||{}).days||{}; for(const d in ds){ out[mid+"-"+d]=ds[d]||{}; } }
+  state.realDays=out;
+}
+function writeError(){ render(); }
+
+/* ---------- backups ---------- */
+function lastBackup(){ try{ return +localStorage.getItem(BKEY)||0; }catch(e){ return 0; } }
+const daysSince = ms => Math.floor((Date.now()-ms)/864e5);
+async function shareOrDownload(name, text, type, title){
+  const blob=new Blob([text],{type});
+  try{
+    const file=new File([blob], name, {type});
+    if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title}); return true; }
+  }catch(e){ if(e && e.name==="AbortError") return false; }
+  const url=URL.createObjectURL(blob), a=document.createElement("a");
+  a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),5000);
+  return true;
+}
+async function exportBackup(){
+  const text=JSON.stringify({app:"earnings-daybook", version:1, exportedAt:new Date().toISOString(), settings:state.settings, months:state.monthsRaw}, null, 1);
+  if(await shareOrDownload("earnings-backup-"+todayKey()+".json", text, "application/json", "Earnings Daybook backup")){
+    try{ localStorage.setItem(BKEY, String(Date.now())); }catch(e){}
+    toast("Backup made. Keep it in Files or iCloud Drive."); render();
+  }
+}
+let pendingImport=null;
+function readImport(file){
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const d=JSON.parse(r.result);
+      if(d.app!=="earnings-daybook" || !d.months || typeof d.months!=="object") throw new Error("not a backup");
+      pendingImport={settings:d.settings||null, months:d.months};
+      render(); $("#dataCard").scrollIntoView({block:"center"});
+    }catch(e){ toast("That file isn't an Earnings Daybook backup."); }
+  };
+  r.readAsText(file);
+}
+function applyImport(){
+  const d=pendingImport; if(!d) return;
+  const s=JSON.parse(JSON.stringify(state.settings||defaultSettings()));
+  if(d.settings && Array.isArray(d.settings.sources)){
+    d.settings.sources.forEach(src=>{ if(src && src.id && !s.sources.some(x=>x.id===src.id)) s.sources.push(src); });
+    if(!saved_any_days()) s.currency=d.settings.currency||s.currency;
+  }
+  const months=JSON.parse(JSON.stringify(state.monthsRaw));
+  for(const mid in d.months){
+    const inc=(d.months[mid]||{}).days||{};
+    months[mid]=months[mid]||{days:{}}; months[mid].days=months[mid].days||{};
+    for(const day in inc) months[mid].days[day]=inc[day];
+  }
+  state.settings=s; state.monthsRaw=months; rebuildDays(); pendingImport=null;
+  try{ store.writeLocal(); toast("Backup imported"); }catch(e){}
+  state.dirty=false; $("#entries").dataset.date=""; render();
+}
+function saved_any_days(){ return Object.keys(state.realDays).length>0; }
+
+/* ---------- ui helpers ---------- */
+function setSync(t, warn){ const el=$("#syncState"); el.textContent=t; el.style.color = warn ? "var(--warn)" : ""; }
+function showBanner(t){ const b=$("#banner"); b.textContent=t; b.hidden=false; }
+let toastT; function toast(t){ const el=$("#toast"); el.textContent=t; el.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>el.hidden=true,2600); }
+function el(tag, attrs, ...kids){
+  const e=document.createElement(tag);
+  for(const k in (attrs||{})){ const v=attrs[k]; if(k==="class") e.className=v; else if(k==="text") e.textContent=v; else if(k.startsWith("on")) e.addEventListener(k.slice(2),v); else if(v!==false && v!=null) e.setAttribute(k, v===true?"":v); }
+  kids.flat().forEach(c=>{ if(c!=null) e.append(c.nodeType?c:document.createTextNode(c)); });
+  return e;
+}
+function newId(){ return "s"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function defaultSettings(){ return {currency:"USD", sources:SUGGESTED.map((n,i)=>({id:"src"+(i+1), name:n, color:PALETTE[i%PALETTE.length], archived:false}))}; }
+function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+
+/* ---------- routing ---------- */
+const VIEWS=["today","charts","forecast","sources"];
+function route(){
+  const h=(location.hash||"").slice(1);
+  state.view = VIEWS.includes(h) ? h : "today";
+  document.querySelectorAll(".tabs a").forEach(a=>{ if(a.dataset.view===state.view) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
+  VIEWS.forEach(v=>$("#view-"+v).hidden = v!==state.view);
+  render();
+}
+window.addEventListener("hashchange", route);
+
+/* ---------- TODAY ---------- */
+function loadDraft(){
+  const rec=days()[state.date]||{}; const d={};
+  activeSources().forEach(s=>{ const v=rec[s.id]; d[s.id] = v ? (+v).toFixed(2) : ""; });
+  state.draft=d; state.dirty=false;
+}
+function lastValue(id, beforeKey){
+  const D=days(); let best=null;
+  for(const k in D){ if(k<beforeKey && D[k][id]!=null && +D[k][id]>0 && (!best||k>best)) best=k; }
+  return best ? {k:best, v:+D[best][id]} : null;
+}
+function renderToday(){
+  const wrap=$("#entries"); const t=todayKey();
+  $("#dateInput").value=state.date; $("#dateInput").max=t;
+  $("#nextDay").disabled = state.date>=t;
+  const rel = state.date===t ? "Today" : state.date===addDays(t,-1) ? "Yesterday" : null;
+  $("#dayTitle").textContent = (rel ? rel+" · " : "") + fmtDate(state.date,{weekday:"long", month:"long", day:"numeric"});
+  const logged = !!days()[state.date];
+  const st=$("#dayStatus");
+  st.className="pill"+(state.dirty?" dirty":logged?" saved":"");
+  st.textContent = state.dirty ? "Unsaved changes" : logged ? "Saved" : "Not logged";
+  $("#revertBtn").hidden = !state.dirty;
+
+  if(!settings() || !activeSources().length){
+    wrap.replaceChildren(el("div",{class:"empty"},
+      el("p",{text: !state.settingsLoaded ? "Loading your sources…" : "No income sources yet. Add the places money comes from, then you can log each day here."}),
+      state.settingsLoaded ? el("div",{class:"row", style:"justify-content:center"},
+        el("button",{class:"btn primary", type:"button", text:"Add the suggested six", onclick:()=>{ store.saveSettings(defaultSettings()).catch(writeError); }}),
+        el("a",{class:"btn", href:"#sources", text:"Set up sources"})) : null));
+    $("#saveBtn").disabled=true;
+  } else {
+    // keep focus if re-rendering the same set of inputs
+    const ids=activeSources().map(s=>s.id).join(",");
+    if(wrap.dataset.ids!==ids || wrap.dataset.date!==state.date || !state.dirty){
+      const focusedId=document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.src : null;
+      const sym=curSymbol();
+      wrap.replaceChildren(...activeSources().map((s,i)=>{
+        const lv=lastValue(s.id, state.date);
+        const input=el("input",{type:"text", inputmode:"decimal", enterkeyhint: i===activeSources().length-1?"done":"next", id:"amt-"+s.id, "data-src":s.id, placeholder:"0.00", value:state.draft[s.id]||"", "aria-label":s.name+" amount"});
+        return el("div",{class:"entry"},
+          el("label",{for:"amt-"+s.id},
+            el("span",{class:"name"}, el("i",{class:"dot", style:"background:"+s.color}), s.name),
+            el("span",{class:"hint", text: lv ? "Last: "+money(lv.v)+" on "+fmtDate(lv.k,{month:"short",day:"numeric"}) : "No entries yet"})),
+          el("div",{class:"money"}, el("span",{text:sym}), input));
+      }));
+      wrap.dataset.ids=ids; wrap.dataset.date=state.date;
+      if(focusedId){ const f=document.getElementById("amt-"+focusedId); if(f) f.focus(); }
+    }
+    $("#saveBtn").disabled = !state.canWrite;
+  }
+  let tot=0; for(const id in state.draft){ const v=parseAmount(state.draft[id]); if(isFinite(v)) tot+=v; }
+  $("#dayTotal").textContent=money(tot);
+  $("#saveBtn").textContent = state.sample ? "Saving is off for sample data" : logged&&!state.dirty ? "Save again" : "Save "+(rel?rel.toLowerCase():fmtDate(state.date,{month:"short",day:"numeric"}));
+  if(state.sample) $("#saveBtn").disabled=true;
+
+  // missing days: within the last 14 days, after the first ever entry
+  const D=days(); const keys=Object.keys(D).sort(); const miss=[];
+  if(keys.length){ const first=keys[0]; for(let i=14;i>=0;i--){ const k=addDays(t,-i); if(k>=first && !D[k] && k!==state.date) miss.push(k); } }
+  $("#missingWrap").hidden = !miss.length;
+  $("#missing").replaceChildren(...miss.map(k=>el("button",{class:"chip", type:"button", text: k===t?"Today":fmtDate(k,{weekday:"short",month:"short",day:"numeric"}), onclick:()=>goDate(k)})));
+
+  // summary tiles
+  const w=sumRange(weekStart(t), t), m=sumRange(monthStart(t), t), y=sumRange(t.slice(0,4)+"-01-01", t);
+  const pm=sumRange(addMonths(t,-1), addDays(addMonths(t,-1), diffDays(monthStart(t), t)));
+  const ch = pm.total>0 ? (m.total-pm.total)/pm.total : null;
+  $("#tiles").replaceChildren(
+    tile("This week", money(w.total), "Since Monday"),
+    tile("This month", money(m.total), ch==null ? fmtMonth(t) : el("span",{class: ch>=0?"up":"down", text:(ch>=0?"▲ ":"▼ ")+Math.abs(ch*100).toFixed(0)+"% vs same days last month"})),
+    tile("This year", money(y.total), t.slice(0,4)+" so far"));
+}
+function tile(label, value, desc){ return el("div",{class:"tile"}, el("h3",{text:label}), el("div",{class:"v", text:value}), el("div",{class:"d"}, desc)); }
+function goDate(k){
+  if(k>todayKey()) k=todayKey();
+  state.date=k; loadDraft(); $("#entries").dataset.date=""; render();
+  const first=$("#entries input"); if(first && matchMedia("(pointer:fine)").matches) first.focus();
+}
+$("#prevDay").onclick=()=>goDate(addDays(state.date,-1));
+$("#nextDay").onclick=()=>goDate(addDays(state.date,1));
+$("#todayBtn").onclick=()=>goDate(todayKey());
+$("#dateInput").onchange=e=>{ if(e.target.value) goDate(e.target.value); };
+$("#revertBtn").onclick=()=>{ loadDraft(); $("#entries").dataset.date=""; render(); };
+$("#entries").addEventListener("input", e=>{
+  const id=e.target.dataset.src; if(!id) return;
+  state.draft[id]=e.target.value; state.dirty=true;
+  e.target.setCustomValidity(isFinite(parseAmount(e.target.value))?"":"Enter a number");
+  renderToday();
+});
+$("#entries").addEventListener("focusin", e=>{ if(e.target.select) setTimeout(()=>e.target.select(),0); });
+$("#entries").addEventListener("keydown", e=>{
+  if(e.key!=="Enter") return; e.preventDefault();
+  const ins=[...document.querySelectorAll("#entries input")]; const i=ins.indexOf(e.target);
+  if(i>-1 && i<ins.length-1) ins[i+1].focus(); else $("#entryForm").requestSubmit();
+});
+$("#entryForm").addEventListener("submit", async e=>{
+  e.preventDefault(); if(state.sample||!state.canWrite) return;
+  const amounts={}; let bad=null;
+  activeSources().forEach(s=>{ const v=parseAmount(state.draft[s.id]); if(!isFinite(v)) bad=s.name; amounts[s.id]=isFinite(v)?v:0; });
+  if(bad){ toast("Check the amount for "+bad+". Use numbers only."); return; }
+  const k=state.date; const existing=state.realDays[k]||{};
+  for(const id in existing) if(!(id in amounts)) amounts[id]=existing[id]; // keep archived sources' values
+  const mid=k.slice(0,7), d=k.slice(8);
+  const body=JSON.parse(JSON.stringify(state.monthsRaw[mid]||{days:{}})); body.days=body.days||{};
+  body.days[d]=amounts; body.updatedAt=new Date().toISOString();
+  const btn=$("#saveBtn"); btn.disabled=true;
+  const before=state.monthsRaw[mid];
+  try{
+    await store.saveMonth(mid, body);
+    state.dirty=false; $("#entries").dataset.date="";
+    toast("Saved "+fmtDate(k,{month:"short",day:"numeric"})+" · "+money(sumObj(amounts)));
+    if(document.activeElement) document.activeElement.blur();
+  }catch(err){ if(before) state.monthsRaw[mid]=before; else delete state.monthsRaw[mid]; rebuildDays(); writeError(err); }
+  render();
+});
+
+/* ---------- CHARTS ---------- */
+let periodChart=null, fcChart=null;
+function periodBounds(){
+  const t=todayKey();
+  if(state.range==="week"){ const s=addDays(weekStart(t), 7*state.offset); return {s, e:addDays(s,6), prevS:addDays(s,-7), prevE:addDays(s,-1)}; }
+  if(state.range==="month"){ const s=addMonths(t, state.offset); return {s, e:monthEnd(s), prevS:addMonths(s,-1), prevE:addDays(s,-1)}; }
+  const y=+t.slice(0,4)+state.offset; return {s:y+"-01-01", e:y+"-12-31", prevS:(y-1)+"-01-01", prevE:(y-1)+"-12-31"};
+}
+function periodLabel(b){
+  if(state.range==="week"){ if(state.offset===0) return "This week"; if(state.offset===-1) return "Last week"; return fmtDate(b.s,{month:"short",day:"numeric"})+" – "+fmtDate(b.e,{month:"short",day:"numeric"}); }
+  if(state.range==="month") return fmtMonth(b.s);
+  return b.s.slice(0,4);
+}
+function chartTheme(){ return {ink:cssVar("--ink"), muted:cssVar("--muted"), line:cssVar("--line"), accent:cssVar("--accent"), surface:cssVar("--surface"), font:"Inter, system-ui, sans-serif"}; }
+function baseOptions(th, stacked){
+  return {
+    responsive:true, maintainAspectRatio:false, animation:false,
+    interaction:{mode:"index", intersect:false},
+    plugins:{
+      legend:{display:false},
+      tooltip:{backgroundColor:th.ink, titleColor:th.surface, bodyColor:th.surface, footerColor:th.surface, padding:10, boxPadding:4,
+        filter:i=>i.raw>0,
+        callbacks:{label:c=>" "+c.dataset.label+": "+money(c.raw), footer:items=>items.length>1?"Total: "+money(items.reduce((a,i)=>a+(+i.raw||0),0)):""}}
+    },
+    scales:{
+      x:{stacked, grid:{display:false}, ticks:{color:th.muted, font:{family:th.font, size:11}, maxRotation:0, autoSkipPadding:6}, border:{color:th.line}},
+      y:{stacked, beginAtZero:true, grid:{color:th.line}, border:{display:false}, ticks:{color:th.muted, font:{family:th.font, size:11}, maxTicksLimit:6, callback:v=>money(v,true)}}
+    }
+  };
+}
+function renderCharts(){
+  document.querySelectorAll("#rangeSeg button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.range===state.range));
+  document.querySelectorAll("#modeSeg button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.mode===state.mode));
+  const b=periodBounds(), D=days(), t=todayKey();
+  $("#periodLabel").textContent=periodLabel(b);
+  $("#nextPeriod").disabled = state.offset>=0;
+  $("#prevLabel").textContent = state.range==="week"?"Previous week":state.range==="month"?"Previous month":"Previous year";
+  const cur=sumRange(b.s,b.e), prev=sumRange(b.prevS,b.prevE);
+  $("#periodTotal").textContent=money(cur.total);
+  $("#periodPrev").replaceChildren(money(prev.total));
+
+  // buckets
+  let buckets=[];
+  if(state.range==="year"){ for(let i=0;i<12;i++){ const s=addMonths(b.s,i); buckets.push({label:parseKey(s).toLocaleDateString(undefined,{month:"short"}), s, e:monthEnd(s), future:s>t}); } }
+  else { const n=diffDays(b.s,b.e)+1; for(let i=0;i<n;i++){ const k=addDays(b.s,i); buckets.push({label: state.range==="week"? fmtDate(k,{weekday:"short", day:"numeric"}) : String(parseKey(k).getDate()), s:k, e:k, future:k>t}); } }
+  const used=new Set(); buckets.forEach(bk=>{ const r=sumRange(bk.s,bk.e); bk.per=r.per; bk.total=r.total; Object.keys(r.per).forEach(id=>{ if(r.per[id]) used.add(id); }); });
+  const srcs = sources().filter(s=>used.has(s.id));
+  Object.keys(cur.per).forEach(id=>{ if(!srcById(id) && cur.per[id]) srcs.push({id, name:"Removed source", color:"#888"}); });
+
+  const th=chartTheme();
+  const datasets = state.mode==="total"
+    ? [{label:"Total", data:buckets.map(x=>Math.round(x.total*100)/100), backgroundColor:th.accent, borderRadius:4, maxBarThickness:48}]
+    : srcs.map((s,i)=>({label:s.name, data:buckets.map(x=>Math.round((x.per[s.id]||0)*100)/100), backgroundColor:s.color, borderRadius: i===srcs.length-1?4:0, maxBarThickness:48}));
+  const has = cur.total>0;
+  $("#chartEmpty").hidden = has; $("#periodChart").parentElement.hidden = !has;
+  if(periodChart){ periodChart.destroy(); periodChart=null; }
+  if(has && window.Chart){
+    periodChart=new Chart($("#periodChart"), {type:"bar", data:{labels:buckets.map(x=>x.label), datasets}, options:baseOptions(th, true)});
+  }
+
+  // breakdown table
+  const rows = sources().map(s=>({s, v:cur.per[s.id]||0, p:prev.per[s.id]||0})).filter(r=>r.v||r.p||!r.s.archived).sort((a,b)=>b.v-a.v);
+  const tbl=$("#breakdown");
+  tbl.replaceChildren(
+    el("thead",{}, el("tr",{}, el("th",{text:"Source"}), el("th",{class:"r", text:periodLabel(b)}), el("th",{text:"Share"}), el("th",{class:"r", text:"Change"}))),
+    el("tbody",{}, rows.map(r=>{
+      const share = cur.total ? r.v/cur.total : 0;
+      const ch = r.p ? (r.v-r.p)/r.p : null;
+      return el("tr",{},
+        el("td",{}, el("span",{class:"src"}, el("i",{class:"dot", style:"background:"+r.s.color}), r.s.name)),
+        el("td",{class:"r num", text:money(r.v)}),
+        el("td",{}, el("div",{class:"share", title:(share*100).toFixed(0)+"%"}, el("i",{style:"width:"+(share*100).toFixed(1)+"%;background:"+r.s.color}))),
+        el("td",{class:"r num "+(ch==null?"muted":ch>=0?"up":"down"), text: ch==null ? "—" : (ch>=0?"+":"")+(ch*100).toFixed(0)+"%"}));
+    })),
+    el("tfoot",{}, el("tr",{}, el("td",{text:"Total"}), el("td",{class:"r num", text:money(cur.total)}), el("td",{}), el("td",{class:"r num "+(prev.total?(cur.total>=prev.total?"up":"down"):"muted"), text: prev.total?((cur.total>=prev.total?"+":"")+((cur.total-prev.total)/prev.total*100).toFixed(0)+"%"):"—"}))));
+}
+$("#rangeSeg").onclick=e=>{ const r=e.target.dataset.range; if(r){ state.range=r; state.offset=0; savePrefs(); render(); } };
+$("#modeSeg").onclick=e=>{ const m=e.target.dataset.mode; if(m){ state.mode=m; savePrefs(); render(); } };
+$("#prevPeriod").onclick=()=>{ state.offset--; render(); };
+$("#nextPeriod").onclick=()=>{ if(state.offset<0){ state.offset++; render(); } };
+
+/* ---------- FORECAST ---------- */
+function buildModel(){
+  const D=days(), t=todayKey();
+  const logged=Object.keys(D).filter(k=>k<=t).sort();
+  if(!logged.length) return {n:0};
+  const end=logged[logged.length-1], start=addDays(end, -(state.lookback-1));
+  const win=logged.filter(k=>k>=start);
+  const ids=new Set(sources().map(s=>s.id)); win.forEach(k=>Object.keys(D[k]).forEach(id=>ids.add(id)));
+  const models={};
+  ids.forEach(id=>{
+    const xs=win.map(k=>diffDays(start,k)), ys=win.map(k=>+D[k][id]||0), n=xs.length;
+    const my=ys.reduce((a,b)=>a+b,0)/n; let a=my, b=0;
+    if(state.method==="trend" && n>=5){
+      const mx=xs.reduce((p,q)=>p+q,0)/n; let sxy=0,sxx=0;
+      for(let i=0;i<n;i++){ sxy+=(xs[i]-mx)*(ys[i]-my); sxx+=(xs[i]-mx)**2; }
+      if(sxx>0){ b=sxy/sxx; a=my-b*mx; }
+    }
+    models[id]={mean:my, a, b};
+  });
+  const predict=(id,k)=>{ const m=models[id]; return m ? Math.max(0, m.a+m.b*diffDays(start,k)) : 0; };
+  const predictRange=(s,e)=>{ const per={}; let tot=0; for(let k=s;k<=e;k=addDays(k,1)){ for(const id in models){ const v=predict(id,k); per[id]=(per[id]||0)+v; tot+=v; } } return {total:tot, per}; };
+  return {n:win.length, start, end, firstDay:win[0], models, predict, predictRange, ids:[...ids]};
+}
+function renderForecast(){
+  document.querySelectorAll("#lookSeg button").forEach(b=>b.setAttribute("aria-pressed", +b.dataset.look===state.lookback));
+  document.querySelectorAll("#methodSeg button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.method===state.method));
+  $("#methodNote").textContent = state.method==="flat"
+    ? "Takes the average earned per logged day and assumes it continues."
+    : "Fits a straight line through the daily numbers and extends it. Good for spotting growth or decline; it can swing a lot over a full year.";
+  const body=$("#fcBody"); const M=buildModel(); const t=todayKey();
+  if(fcChart){ fcChart.destroy(); fcChart=null; }
+  if(M.n<3){
+    body.replaceChildren(el("div",{class:"panel empty"},
+      el("p",{text: M.n ? "Log at least 3 days to see a forecast. You have "+M.n+" so far." : "Forecasts appear once a few days are logged."}),
+      !state.sample ? el("button",{class:"btn", type:"button", text:"Preview with sample numbers", onclick:startSample}) : null));
+    return;
+  }
+  // tiles
+  const ms=monthStart(t), me=monthEnd(t);
+  const actualMonth=sumRange(ms, t);
+  const unloggedThisMonth=[]; for(let k=ms;k<=me;k=addDays(k,1)) if(!days()[k] && (k>M.end || k>=t)) unloggedThisMonth.push(k);
+  let restMonth=0; unloggedThisMonth.forEach(k=>{ for(const id in M.models) restMonth+=M.predict(id,k); });
+  const nm=addMonths(t,1), nmE=monthEnd(nm);
+  const nextMonth=M.predictRange(nm, nmE);
+  const yE=addDays(addMonths(t,13),-1);
+  const nextYear=M.predictRange(nm, yE);
+  let rate=0; for(const id in M.models) rate+=Math.max(0, M.predict(id, addDays(M.end,1)));
+
+  const tiles=el("div",{class:"tiles"},
+    tile(fmtMonth(nm), money(nextMonth.total), "Next month, projected"),
+    tile("Next 12 months", money(nextYear.total), fmtMonth(nm,true)+" – "+fmtMonth(addMonths(t,12),true)),
+    tile(parseKey(t).toLocaleDateString(undefined,{month:"long"})+" on pace for", money(actualMonth.total+restMonth), money(actualMonth.total)+" earned so far"));
+
+  const days_ = M.n===1?"day":"days";
+  const basis=el("p",{class:"muted small", style:"margin:0", text:"Based on "+M.n+" logged "+days_+" from "+fmtDate(M.firstDay,{month:"short",day:"numeric",year:"numeric"})+" to "+fmtDate(M.end,{month:"short",day:"numeric",year:"numeric"})+". Current pace: "+money(rate)+" a day."+(M.n<state.lookback && diffDays(M.firstDay,M.end)+1<state.lookback ? " That's less history than the period you picked, so the forecast uses what there is." : "")});
+
+  // chart: 12 months back (actual) + 12 forward (projected)
+  const labels=[], actual=[], proj=[];
+  for(let i=-11;i<=12;i++){
+    const s=addMonths(t,i), e=monthEnd(s); labels.push(fmtMonth(s,true));
+    if(i<0){ actual.push(+sumRange(s,e).total.toFixed(2)); proj.push(0); }
+    else if(i===0){ actual.push(+actualMonth.total.toFixed(2)); proj.push(+restMonth.toFixed(2)); }
+    else { actual.push(0); proj.push(+M.predictRange(s,e).total.toFixed(2)); }
+  }
+  const th=chartTheme();
+  const chartPanel=el("div",{class:"panel stack"},
+    el("div",{class:"row"}, el("h3",{text:"Monthly earnings"}), el("span",{class:"spacer"}),
+      el("span",{class:"small muted row", style:"gap:6px"}, el("i",{class:"dot", style:"background:"+th.accent}), "Actual", el("i",{class:"dot", style:"background:"+th.accent+";opacity:.35;margin-left:8px"}), "Projected")),
+    el("div",{class:"chartbox"}, el("canvas",{id:"fcCanvas", role:"img", "aria-label":"Actual and projected monthly earnings"})));
+
+  // per-source table
+  const list=M.ids.map(id=>({id, s:srcById(id)||{name:"Removed source", color:"#888"}, rate:M.predict(id,addDays(M.end,1)), nm:nextMonth.per[id]||0, ny:nextYear.per[id]||0}))
+    .filter(r=>r.ny>0.004 || (r.s && !r.s.archived && srcById(r.id))).sort((a,b)=>b.ny-a.ny);
+  const table=el("div",{class:"panel stack"}, el("h3",{text:"By source"}), el("div",{class:"tablewrap"}, el("table",{},
+    el("thead",{}, el("tr",{}, el("th",{text:"Source"}), el("th",{class:"r", text:"Per day"}), el("th",{class:"r", text:fmtMonth(nm,true)}), el("th",{class:"r", text:"12 months"}))),
+    el("tbody",{}, list.map(r=>el("tr",{},
+      el("td",{}, el("span",{class:"src"}, el("i",{class:"dot", style:"background:"+r.s.color}), r.s.name)),
+      el("td",{class:"r num", text:money(r.rate)}), el("td",{class:"r num", text:money(r.nm)}), el("td",{class:"r num", text:money(r.ny)})))),
+    el("tfoot",{}, el("tr",{}, el("td",{text:"Total"}), el("td",{class:"r num", text:money(rate)}), el("td",{class:"r num", text:money(nextMonth.total)}), el("td",{class:"r num", text:money(nextYear.total)}))))));
+
+  body.replaceChildren(tiles, basis, chartPanel, table);
+  if(window.Chart){
+    const opts=baseOptions(th, true);
+    opts.scales.x.ticks.autoSkip=true; opts.scales.x.ticks.maxTicksLimit=8;
+    fcChart=new Chart($("#fcCanvas"), {type:"bar", data:{labels, datasets:[
+      {label:"Actual", data:actual, backgroundColor:th.accent, maxBarThickness:28},
+      {label:"Projected", data:proj, backgroundColor:th.accent+"55", borderColor:th.accent, borderWidth:{top:1.5,left:0,right:0,bottom:0}, borderDash:[3,3], maxBarThickness:28}
+    ]}, options:opts});
+  }
+}
+$("#lookSeg").onclick=e=>{ const v=+e.target.dataset.look; if(v){ state.lookback=v; savePrefs(); render(); } };
+$("#methodSeg").onclick=e=>{ const m=e.target.dataset.method; if(m){ state.method=m; savePrefs(); render(); } };
+
+/* ---------- SOURCES ---------- */
+function editSettings(mut){
+  if(state.sample){ toast("Leave sample mode to change sources."); return; }
+  const s=JSON.parse(JSON.stringify(state.settings||{currency:"USD", sources:[]}));
+  s.sources=s.sources||[]; mut(s);
+  store.saveSettings(s).then(()=>render()).catch(writeError);
+  render();
+}
+function renderSources(){
+  const list=$("#srcList"); const srcs=sources();
+  $("#currency").value=(settings()&&settings().currency)||"USD";
+  if(!srcs.length){
+    list.replaceChildren(el("div",{class:"empty"}, el("p",{text:"No sources yet. Add your own below, or start with the usual six: "+SUGGESTED.join(", ")+"."}),
+      el("button",{class:"btn primary", type:"button", text:"Add the suggested six", onclick:()=>editSettings(s=>{ s.sources=defaultSettings().sources; })})));
+    return;
+  }
+  const active=document.activeElement && document.activeElement.id;
+  list.replaceChildren(...srcs.map((s,i)=>{
+    const name=el("input",{type:"text", id:"name-"+s.id, value:s.name, "aria-label":"Source name"});
+    name.addEventListener("change", ()=>{ const v=name.value.trim(); if(v && v!==s.name) editSettings(st=>{ st.sources.find(x=>x.id===s.id).name=v; }); else name.value=s.name; });
+    const sw=el("button",{class:"swatch", type:"button", style:"background:"+s.color, "aria-label":"Change colour for "+s.name, title:"Change colour",
+      onclick:()=>editSettings(st=>{ const x=st.sources.find(q=>q.id===s.id); const j=PALETTE.indexOf(x.color); x.color=PALETTE[(j+1)%PALETTE.length]; })});
+    const acts=el("div",{class:"acts"},
+      el("button",{class:"btn icon", type:"button", "aria-label":"Move "+s.name+" up", disabled:i===0, text:"↑", onclick:()=>editSettings(st=>{ const a=st.sources; [a[i-1],a[i]]=[a[i],a[i-1]]; })}),
+      el("button",{class:"btn icon", type:"button", "aria-label":"Move "+s.name+" down", disabled:i===srcs.length-1, text:"↓", onclick:()=>editSettings(st=>{ const a=st.sources; [a[i+1],a[i]]=[a[i],a[i+1]]; })}),
+      el("button",{class:"btn", type:"button", text:s.archived?"Restore":"Archive", onclick:()=>editSettings(st=>{ const x=st.sources.find(q=>q.id===s.id); x.archived=!x.archived; })}));
+    return el("div",{class:"srcrow"+(s.archived?" archived":"")}, sw, name, acts);
+  }));
+  if(active && active.startsWith("name-")){ const f=document.getElementById(active); if(f) f.focus(); }
+}
+$("#addForm").addEventListener("submit", e=>{
+  e.preventDefault(); const v=$("#addName").value.trim(); if(!v) return;
+  editSettings(s=>{ const used=s.sources.map(x=>x.color); const color=PALETTE.find(c=>!used.includes(c))||PALETTE[s.sources.length%PALETTE.length]; s.sources.push({id:newId(), name:v, color, archived:false}); });
+  $("#addName").value=""; toast("Added "+v);
+});
+$("#currency").onchange=e=>editSettings(s=>{ s.currency=e.target.value; });
+
+/* ---------- export ---------- */
+$("#backupBtn").onclick=exportBackup;
+$("#importBtn").onclick=()=>$("#importFile").click();
+$("#importFile").onchange=e=>{ const f=e.target.files&&e.target.files[0]; if(f) readImport(f); e.target.value=""; };
+$("#exportBtn").onclick=async()=>{
+  const D=state.realDays, srcs=sources(), keys=Object.keys(D).sort();
+  if(!keys.length){ toast("Nothing logged yet."); return; }
+  const esc=v=>{ v=String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
+  const lines=[["Date",...srcs.map(s=>s.name),"Total"].map(esc).join(",")];
+  keys.forEach(k=>lines.push([k,...srcs.map(s=>(+D[k][s.id]||0).toFixed(2)), sumObj(D[k]).toFixed(2)].join(",")));
+  await shareOrDownload("earnings-"+todayKey()+".csv", lines.join("\n"), "text/csv", "Earnings Daybook export");
+};
+
+/* ---------- sample data (in memory only) ---------- */
+function startSample(){
+  const st=defaultSettings(); const D={}; const t=todayKey();
+  const base={src1:38, src2:22, src3:55, src4:30, src5:18, src6:9};
+  let seed=7; const rnd=()=>{ seed=(seed*9301+49297)%233280; return seed/233280; };
+  for(let i=400;i>=0;i--){ const k=addDays(t,-i); const g=1+(400-i)/900; const wk=[0,5,6].includes(parseKey(k).getDay())?1.2:1; const rec={};
+    for(const id in base) rec[id]=Math.round(base[id]*g*wk*(0.5+rnd())*100)/100;
+    if(rnd()<0.08) rec.src5=Math.round(rec.src5*6*100)/100; D[k]=rec; }
+  state.sample={settings:st, days:D}; $("#samplebar").hidden=false; loadDraft(); $("#entries").dataset.date=""; render();
+}
+$("#exitSample").onclick=()=>{ state.sample=null; $("#samplebar").hidden=true; loadDraft(); $("#entries").dataset.date=""; render(); };
+
+/* ---------- render ---------- */
+let lastSrcSig="";
+function render(){
+  const sig=activeSources().map(s=>s.id).join(",")+"|"+state.date+"|"+JSON.stringify(days()[state.date]||null);
+  if(!state.dirty && sig!==lastSrcSig){ loadDraft(); }
+  lastSrcSig=sig;
+  // storage status, backup reminder and the Your data card
+  setSync(storageOK ? "Saved on this phone" : "Not saving", !storageOK);
+  const ban=$("#banner");
+  ban.hidden=storageOK; if(!storageOK) ban.textContent="This phone isn't letting the Daybook save. If you're in a Private tab, open it in a normal tab or from your Home Screen. Export a backup so nothing is lost.";
+  const lb=lastBackup(), nDays=Object.keys(state.realDays).length, stale=nDays>2 && (!lb || daysSince(lb)>=14);
+  $("#backupNudge").hidden = !stale || state.view==="sources" || !!state.sample;
+  $("#backupNudgeText").textContent = lb ? "Your last backup was "+daysSince(lb)+" days ago." : "You haven't backed up your entries yet.";
+  const lbd=lb?daysSince(lb):null, lbEl=$("#lastBackup");
+  lbEl.textContent = lb ? (lbd===0?"Today":lbd===1?"Yesterday":lbd+" days ago") : "Never";
+  lbEl.className = "num "+(lb && lbd<14 ? "good" : "bad");
+  const ic=$("#importConfirm");
+  if(pendingImport){
+    let n=0; for(const mid in pendingImport.months) n+=Object.keys((pendingImport.months[mid]||{}).days||{}).length;
+    ic.replaceChildren(el("span",{text:"Add "+n+" logged day"+(n===1?"":"s")+" from this backup? Days already on this phone with the same date are replaced with the backup's copy."}),
+      el("div",{class:"row"}, el("button",{class:"btn primary", type:"button", text:"Import", onclick:applyImport}), el("button",{class:"btn", type:"button", text:"Cancel", onclick:()=>{ pendingImport=null; render(); }})));
+    ic.hidden=false;
+  } else ic.hidden=true;
+  if(state.view==="today") renderToday();
+  else if(state.view==="charts"){ renderCharts(); if(!Object.keys(days()).length && !state.sample) $("#chartEmpty").replaceChildren(el("p",{text:"Charts fill in as days are logged."}), el("button",{class:"btn", type:"button", text:"Preview with sample numbers", onclick:startSample})); else $("#chartEmpty").replaceChildren(el("p",{text:"Nothing logged in this period."})); }
+  else if(state.view==="forecast") renderForecast();
+  else if(state.view==="sources") renderSources();
+}
+// re-theme charts when the light/dark setting changes
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>render());
+new MutationObserver(()=>render()).observe(document.documentElement,{attributes:true, attributeFilter:["data-theme"]});
+// roll "today" over at midnight if the page stays open
+let lastToday=todayKey();
+setInterval(()=>{ const t=todayKey(); if(t!==lastToday){ if(state.date===lastToday && !state.dirty) state.date=t; lastToday=t; render(); } }, 60000);
+
+store.init();
+route();
+if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
+})();
+</script>
+</body>
+</html>
