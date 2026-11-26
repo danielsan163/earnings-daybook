@@ -12,7 +12,8 @@
 
 Ordered by time saved per day.
 
-- [ ] **Dashboard shortcuts.** A small link button on each source row that opens that platform's earnings page (KDP Reports, ACX, Shopify admin, TikTok Seller Center, YouTube Studio Analytics, Meta Professional Dashboard). Check the number, swipe back, type it in. Defaults filled in; she can change each link in Settings.
+- [x] **Dashboard shortcuts.** A ↗ button on each source row opens that platform's earnings page (KDP Reports, ACX, Shopify admin, TikTok Seller Center, YouTube Studio revenue, Meta monetization). Coming back selects that source's box. Defaults filled in; each link can be changed or cleared in Settings.
+- [x] **One-time income** for book signings and events (shows on its own day only, left out of forecasts).
 - [ ] **Month-to-date mode per source.** Many dashboards show month-to-date totals more readily than a single day. For a source set this way, she types the month-to-date figure and the app works out today's amount by subtracting what's already logged this month. No mental maths.
 - [ ] **Maths in the boxes.** Type `12.40+3.99` (e.g. US + UK marketplaces) and it adds them up when she leaves the box.
 - [ ] **Open on the right day.** Most dashboards lag (KDP and YouTube often show yesterday's numbers). Option for the app to open on the oldest unlogged day, and to move straight to the next unlogged day after saving, so catching up after a few days is one continuous run.

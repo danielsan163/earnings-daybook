@@ -107,7 +107,10 @@ button{cursor:pointer}
 .pill.saved{background:var(--accent-soft);color:var(--accent)}
 .pill.dirty{background:var(--warn-soft);color:var(--warn)}
 .entries{display:flex;flex-direction:column}
-.entry{display:grid;grid-template-columns:1fr minmax(120px,160px);gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.entry{display:grid;grid-template-columns:36px 1fr minmax(120px,160px);gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.dash{width:36px;height:36px;display:grid;place-items:center;border-radius:8px;color:var(--accent);background:var(--accent-soft);text-decoration:none}
+.dash:hover{filter:brightness(.95)}
+.dash.none{background:transparent}
 .entry:first-child{border-top:0}
 .entry label{display:flex;flex-direction:column;gap:1px;min-width:0}
 .entry .name{display:flex;align-items:center;gap:8px;font-weight:600}
@@ -151,6 +154,9 @@ tfoot td{font-weight:600;border-bottom:0}
 
 /* Sources */
 .srcrow{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.srcfields{display:flex;flex-direction:column;gap:6px;min-width:0}
+.srcfields input.url{font-size:.8rem;padding:6px 10px;color:var(--muted)}
+.srcfields input.url:focus{color:var(--ink)}
 .srcrow:first-child{border-top:0}
 .srcrow input[type=text]{width:100%;min-width:0;border:1px solid var(--line);background:var(--sunk);border-radius:8px;padding:8px 10px}
 .srcrow.archived input[type=text]{color:var(--muted);text-decoration:line-through}
@@ -225,7 +231,7 @@ a.tile{color:inherit;text-decoration:none}
 @media (max-width:480px){
   .tiles{grid-template-columns:1fr 1fr}
   .tiles .tile:first-child{grid-column:1/-1}
-  .entry{grid-template-columns:1fr 130px}
+  .entry{grid-template-columns:36px 1fr 120px;gap:8px}
   .chartbox{height:240px}
 }
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
@@ -368,7 +374,7 @@ a.tile{color:inherit;text-decoration:none}
     </div>
     <div class="panel stack">
       <h2>Income sources</h2>
-      <p class="muted small" style="margin:0">These are the boxes on the Today screen, in this order. Archiving a source hides it from Today but keeps its history in charts.</p>
+      <p class="muted small" style="margin:0">These are the boxes on the Today screen, in this order. Put them in the order you check them. The link under each name is where the ↗ button on Today goes; change it to the exact page you use, or clear it to hide the button. Archiving a source hides it from Today but keeps its history in charts.</p>
       <div id="srcList"></div>
       <form class="stack" id="addForm" style="gap:8px">
         <div class="add">
@@ -438,6 +444,7 @@ a.tile{color:inherit;text-decoration:none}
           <p>On <b>Today</b>, type what each source earned. Press Enter to jump to the next box; Enter on the last box saves. An empty box counts as $0.</p>
           <ul>
             <li>Under each source it shows the last amount you entered and when.</li>
+            <li>The ↗ button beside each source opens that platform's earnings page (KDP, ACX, Shopify, TikTok Shop, YouTube Studio, Meta). Check the number, come back, and that source's box is ready to type in. Change the links under <b>Income sources</b> in Settings.</li>
             <li>Use the arrows or the date box to go back and fill in or fix an earlier day. Saving a day again replaces what was there.</li>
             <li>Days from the last two weeks that haven't been logged show as buttons under the form. Tap one to jump to it.</li>
             <li>Book signing or other one-off income? Tap <b>+ One-time income</b> under the boxes, type what it was and the amount, then save the day. It only shows on that day, not every day after.</li>
@@ -561,6 +568,25 @@ const sources = () => (settings() && Array.isArray(settings().sources)) ? settin
 // Sources shown on Today for the selected date: regular ones, plus one-time events dated that day
 const activeSources = () => sources().filter(s=>!s.archived && (!s.oneTime || s.day===state.date));
 const srcById = id => sources().find(s=>s.id===id);
+// Where each platform shows earnings. A source's own `url` wins; "" means she removed the link.
+const DASHBOARDS=[
+  [/kdp|kindle|amazon/i, "https://kdpreports.amazon.com/dashboard"],
+  [/audible|acx/i, "https://www.acx.com/"],
+  [/shopify/i, "https://admin.shopify.com/"],
+  [/tiktok/i, "https://seller-us.tiktok.com/"],
+  [/youtube/i, "https://studio.youtube.com/channel/UC/analytics/tab-earn_revenue/period-default"],
+  [/meta|facebook|instagram/i, "https://business.facebook.com/latest/monetization"]
+];
+function dashboardUrl(s){
+  if(!s || s.oneTime) return "";
+  if(typeof s.url==="string") return s.url;
+  const hit=DASHBOARDS.find(([re])=>re.test(s.name)); return hit ? hit[1] : "";
+}
+function cleanUrl(v){
+  v=(v||"").trim(); if(!v) return "";
+  if(!/^https?:\/\//i.test(v)) v="https://"+v;
+  try{ const u=new URL(v); return u.protocol==="https:"||u.protocol==="http:" ? u.href : null; }catch(e){ return null; }
+}
 
 function money(v, compact){
   const cur=(settings()&&settings().currency)||"USD";
@@ -999,7 +1025,10 @@ function renderToday(){
       wrap.replaceChildren(...activeSources().map((s,i)=>{
         const lv=lastValue(s.id, state.date);
         const input=el("input",{type:"text", inputmode:"decimal", enterkeyhint: i===activeSources().length-1?"done":"next", id:"amt-"+s.id, "data-src":s.id, placeholder:"0.00", value:state.draft[s.id]||"", "aria-label":s.name+" amount"});
+        const url=dashboardUrl(s);
+        const link = url ? el("a",{class:"dash", href:url, target:"_blank", rel:"noopener noreferrer", "aria-label":"Open "+s.name+" earnings page", title:"Open "+s.name+" earnings page", onclick:()=>{ lastDash=s.id; }}, dashIcon()) : el("span",{class:"dash none", "aria-hidden":"true"});
         return el("div",{class:"entry"},
+          link,
           el("label",{for:"amt-"+s.id},
             el("span",{class:"name"}, el("i",{class:"dot", style:"background:"+s.color}), s.name),
             el("span",{class:"hint", text: s.oneTime ? "One-time event" : lv ? "Last: "+money(lv.v)+" on "+fmtDate(lv.k,{month:"short",day:"numeric"}) : "No entries yet"})),
@@ -1040,6 +1069,21 @@ function renderToday(){
   }));
   renderReminder();
 }
+function dashIcon(){
+  const ns="http://www.w3.org/2000/svg", svg=document.createElementNS(ns,"svg");
+  svg.setAttribute("viewBox","0 0 20 20"); svg.setAttribute("width","18"); svg.setAttribute("height","18"); svg.setAttribute("aria-hidden","true");
+  const p=document.createElementNS(ns,"path");
+  p.setAttribute("d","M8 4H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-3M11 4h5v5M16 4l-7 7");
+  p.setAttribute("fill","none"); p.setAttribute("stroke","currentColor"); p.setAttribute("stroke-width","1.8"); p.setAttribute("stroke-linecap","round"); p.setAttribute("stroke-linejoin","round");
+  svg.append(p); return svg;
+}
+// after checking a dashboard and coming back, have that source's box ready to type in
+let lastDash=null;
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState!=="visible" || !lastDash || state.view!=="today") return;
+  const f=document.getElementById("amt-"+lastDash); lastDash=null;
+  if(f){ f.focus(); f.select(); }
+});
 function tile(label, value, desc, progress){
   return el("div",{class:"tile"}, el("h3",{text:label}), el("div",{class:"v", text:value}),
     progress!=null ? el("div",{class:"bar", role:"progressbar", "aria-valuemin":"0", "aria-valuemax":"100", "aria-valuenow":String(Math.round(progress*100))}, el("i",{style:"width:"+(progress*100).toFixed(1)+"%"})) : null,
@@ -1482,7 +1526,13 @@ function renderSources(){
       el("button",{class:"btn icon", type:"button", "aria-label":"Move "+s.name+" up", disabled:i===0, text:"↑", onclick:()=>move(s.id,-1)}),
       el("button",{class:"btn icon", type:"button", "aria-label":"Move "+s.name+" down", disabled:i===regular.length-1, text:"↓", onclick:()=>move(s.id,1)}),
       el("button",{class:"btn", type:"button", text:s.archived?"Restore":"Archive", onclick:()=>editSettings(st=>{ const x=st.sources.find(q=>q.id===s.id); x.archived=!x.archived; })}));
-    return el("div",{class:"srcrow"+(s.archived?" archived":"")}, swatch(s), nameInput(s), acts);
+    const url=el("input",{type:"url", class:"url", id:"url-"+s.id, value:dashboardUrl(s), placeholder:"Earnings page link (optional)", "aria-label":s.name+" earnings page link", inputmode:"url", autocapitalize:"off", spellcheck:"false"});
+    url.addEventListener("change", ()=>{
+      const v=cleanUrl(url.value);
+      if(v===null){ toast("That doesn't look like a web address."); url.value=dashboardUrl(s); return; }
+      if(v!==dashboardUrl(s)) editSettings(st=>{ st.sources.find(x=>x.id===s.id).url=v; });
+    });
+    return el("div",{class:"srcrow"+(s.archived?" archived":"")}, swatch(s), el("div",{class:"srcfields"}, nameInput(s), url), acts);
   }));
   $("#eventsWrap").hidden=!events.length;
   $("#eventList").replaceChildren(...events.map(s=>{
