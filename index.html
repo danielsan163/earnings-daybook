@@ -1222,9 +1222,30 @@ function noteMarkers(indices, color){
   }};
 }
 const clip = (s,n) => s.length>n ? s.slice(0,n-1)+"…" : s;
+// On touch screens the chart's own handling leaves a pop-up stuck open, so taps are handled here instead:
+// tap a bar to open its pop-up, tap anywhere (the chart, the pop-up or elsewhere) to close it.
+const TOUCH = matchMedia("(hover: none)").matches;
+function hideTip(c){ if(c && c.tooltip && c.tooltip.getActiveElements().length){ c.tooltip.setActiveElements([], {x:0, y:0}); c.update("none"); return true; } return false; }
+function tapTooltips(chart){
+  if(!TOUCH) return chart;
+  const cv=chart.canvas; cv._chart=chart;   // the canvas is reused when the chart is redrawn: bind once
+  if(cv._tapBound) return chart;
+  cv._tapBound=true;
+  cv.addEventListener("click", e=>{
+    const chart=cv._chart; if(!chart || !chart.tooltip) return;
+    if(hideTip(chart)) return;
+    const els=chart.getElementsAtEventForMode(e, "index", {intersect:false}, false);
+    if(!els.length) return;
+    chart.tooltip.setActiveElements(els.map(x=>({datasetIndex:x.datasetIndex, index:x.index})), {x:e.offsetX, y:e.offsetY});
+    chart.update("none");
+  });
+  return chart;
+}
+document.addEventListener("pointerdown", e=>{ [periodChart, fcChart].forEach(c=>{ if(c && e.target!==c.canvas) hideTip(c); }); }, true);
 function baseOptions(th, stacked, extraFooter){
   return {
     responsive:true, maintainAspectRatio:false, animation:false,
+    events: TOUCH ? [] : ["mousemove","mouseout","click"],
     layout:{padding:{top:14}},
     interaction:{mode:"index", intersect:false},
     plugins:{
@@ -1289,7 +1310,7 @@ function renderCharts(){
   $("#chartEmpty").hidden = has; $("#periodChart").parentElement.hidden = !has;
   if(periodChart){ periodChart.destroy(); periodChart=null; }
   if(has && window.Chart){
-    periodChart=new Chart($("#periodChart"), {type:"bar", data:{labels:buckets.map(x=>x.label), datasets}, options:baseOptions(th, true, footerNotes), plugins:[noteMarkers(noteIdx, th.hi)]});
+    periodChart=tapTooltips(new Chart($("#periodChart"), {type:"bar", data:{labels:buckets.map(x=>x.label), datasets}, options:baseOptions(th, true, footerNotes), plugins:[noteMarkers(noteIdx, th.hi)]}));
   }
   const key=$("#chartKey");
   key.replaceChildren(...[
@@ -1407,10 +1428,10 @@ function renderForecast(){
   if(window.Chart){
     const opts=baseOptions(th, true);
     opts.scales.x.ticks.autoSkip=true; opts.scales.x.ticks.maxTicksLimit=8;
-    fcChart=new Chart($("#fcCanvas"), {type:"bar", data:{labels, datasets:[
+    fcChart=tapTooltips(new Chart($("#fcCanvas"), {type:"bar", data:{labels, datasets:[
       {label:"Actual", data:actual, backgroundColor:th.accent, maxBarThickness:28},
       {label:"Projected", data:proj, backgroundColor:th.hi+"66", borderColor:th.hi, borderWidth:{top:1.5,left:0,right:0,bottom:0}, maxBarThickness:28}
-    ]}, options:opts});
+    ]}, options:opts}));
   }
 }
 $("#lookSeg").onclick=e=>{ const v=+e.target.dataset.look; if(v){ state.lookback=v; savePrefs(); render(); } };
