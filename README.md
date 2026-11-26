@@ -22,6 +22,16 @@ It's served by GitHub Pages from the `main` branch, root folder, at `https://dan
 - **Forecast**: pick how much history to use (7 days to 1 year) and either a steady average or the recent trend.
 - **Settings**: goals, theme (Royal, Amethyst, Gilded, Evergreen, Slate; each follows the phone's light/dark mode), income sources (add, rename, reorder, archive), currency, CSV export and backups.
 
+## Sync between iPhone and iMac
+
+Optional. Sign in under **Settings → Sync across devices** with the same email and password on each device. Entries, notes, sources, currency and goals then stay in step through Supabase (the same project as Kana Kanji SRS). Each device still keeps its own copy, so it works offline and syncs when back online. If the same day is changed on two devices, the most recent save wins.
+
+One-time setup (already needed before anyone signs in):
+1. In the Supabase dashboard for the Kana Kanji SRS project, open **SQL Editor**, paste in [`supabase/schema.sql`](supabase/schema.sql) and run it. It only adds two `daybook_` tables; it's safe to run again.
+2. In **Authentication → URL Configuration**, add `https://danielsan163.github.io/earnings-daybook/` to **Redirect URLs**, so the confirmation email for a new account brings her back to the Daybook.
+
+Then on her iPhone: Settings → Create account (confirm the email), and on the iMac: open the site in Safari (File → Add to Dock, if you like) and sign in.
+
 ## Backups
 
 On the Settings tab, under **Your data** (backups include notes and goals):

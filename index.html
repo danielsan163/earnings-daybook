@@ -151,6 +151,8 @@ tfoot td{font-weight:600;border-bottom:0}
 .srcrow .acts{display:flex;gap:4px}
 .swatch{width:28px;height:28px;border-radius:7px;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line)}
 .add{display:flex;gap:8px}
+#signinForm input{width:100%;border:1px solid var(--line);background:var(--sunk);border-radius:8px;padding:11px 12px;font-size:1rem}
+#signinForm input:focus{background:var(--surface);border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
 .add input{flex:1;min-width:0;border:1px solid var(--line);background:var(--sunk);border-radius:8px;padding:10px}
 select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 10px}
 
@@ -365,9 +367,32 @@ a.tile{color:inherit;text-decoration:none}
       </div>
       <div class="row"><span style="flex:1">Export every logged day as a spreadsheet (CSV)</span><button class="btn" id="exportBtn" type="button">Export CSV</button></div>
     </div>
+    <div class="panel stack" id="syncCard">
+      <h2>Sync across devices</h2>
+      <div id="syncOut" class="stack" hidden>
+        <p class="muted small" style="margin:0">Sign in on each device (iPhone, iMac) with the same account and your entries, notes, sources and goals stay in step. Everything still works offline and syncs when you're back online.</p>
+        <form id="signinForm" class="stack" autocomplete="on">
+          <input type="email" id="syncEmail" autocomplete="username" placeholder="Email" aria-label="Email" required>
+          <input type="password" id="syncPass" autocomplete="current-password" placeholder="Password (at least 6 characters)" aria-label="Password" minlength="6" required>
+          <div class="row">
+            <button class="btn primary" style="flex:1" type="submit" id="signinBtn">Sign in</button>
+            <button class="btn" style="flex:1;padding:12px" type="button" id="signupBtn">Create account</button>
+          </div>
+        </form>
+      </div>
+      <div id="syncIn" class="stack" hidden>
+        <div class="row" style="justify-content:space-between"><span>Signed in as</span><strong id="syncWho" style="overflow-wrap:anywhere"></strong></div>
+        <div class="row" style="justify-content:space-between"><span>Last synced</span><strong class="num" id="syncWhen">Never</strong></div>
+        <div class="row">
+          <button class="btn primary" style="flex:1" type="button" id="syncNowBtn">Sync now</button>
+          <button class="btn" style="flex:1;padding:12px" type="button" id="signoutBtn">Sign out</button>
+        </div>
+      </div>
+      <p class="small" id="syncMsg" style="margin:0" hidden></p>
+    </div>
     <div class="panel stack" id="dataCard">
       <h2>Your data</h2>
-      <p class="muted small" style="margin:0">Entries are saved on this phone only. Export a backup every week or two and keep it in Files or iCloud Drive, so a new phone or cleared Safari data doesn't wipe it.</p>
+      <p class="muted small" style="margin:0">Entries are saved on this device, and in your account if you've signed in to sync. A backup file in Files or iCloud Drive is still a good safety net.</p>
       <div class="row" style="justify-content:space-between"><span>Last backup</span><strong class="num" id="lastBackup">Never</strong></div>
       <div id="importConfirm" class="confirm" hidden></div>
       <div class="row">
@@ -447,8 +472,11 @@ a.tile{color:inherit;text-decoration:none}
       <details>
         <summary>Keeping your data safe</summary>
         <div class="body">
-          <p>Everything is saved on this phone only. Nothing is sent anywhere.</p>
+          <p>Everything is saved on the device you're using. If you sign in under <b>Sync across devices</b>, it's also kept in your private account online, so the iPhone and iMac stay in step. Only your account can see it.</p>
           <ul>
+            <li>Sign in with the same email and password on each device. Saving a day sends it up within a few seconds; the other device picks it up when you open it.</li>
+            <li>If the same day is changed on two devices, the most recent save wins.</li>
+            <li>No signal? Keep logging. It syncs when you're back online.</li>
             <li>Open the Daybook from the Home Screen icon, not a Private tab in Safari.</li>
             <li>Every week or two, tap <b>Export backup</b> and save the file to Files or iCloud Drive. The app reminds you after 14 days.</li>
             <li>On a new phone, or after clearing Safari, use <b>Import backup</b> to bring everything back, including notes and goals.</li>
@@ -488,6 +516,7 @@ const fmtMonth = (k, short) => parseKey(k).toLocaleDateString(undefined, short?{
 const state = {
   settings:null, settingsLoaded:false, monthsRaw:{}, monthsLoaded:false, realDays:{},
   goals:{week:{}, month:{}, year:{}}, goalSkips:{}, celebrated:{}, noteDraft:"",
+  dayStamps:{}, pending:{}, metaAt:{settings:0, goals:{}}, metaDirty:false,
   sample:null, date:todayKey(), draft:{}, dirty:false, view:"today",
   range:"week", offset:0, mode:"stack", lookback:30, method:"flat", canWrite:true
 };
@@ -535,6 +564,10 @@ const store = {
     state.goals = {week:g.week||{}, month:g.month||{}, year:g.year||{}};
     state.goalSkips = (saved && saved.goalSkips) || {};
     state.celebrated = (saved && saved.celebrated) || {};
+    state.dayStamps = (saved && saved.dayStamps) || {};
+    state.pending = (saved && saved.pending) || {};
+    state.metaAt = (saved && saved.metaAt) || {settings:0, goals:{}};
+    state.metaDirty = !!(saved && saved.metaDirty);
     state.settingsLoaded=state.monthsLoaded=true; rebuildDays();
     if(!saved) this.writeLocal();
     try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
@@ -542,16 +575,175 @@ const store = {
   },
   writeLocal(){
     try{
-      localStorage.setItem(LSKEY, JSON.stringify({settings:state.settings, months:state.monthsRaw, goals:state.goals, goalSkips:state.goalSkips, celebrated:state.celebrated}));
+      localStorage.setItem(LSKEY, JSON.stringify({settings:state.settings, months:state.monthsRaw, goals:state.goals, goalSkips:state.goalSkips, celebrated:state.celebrated,
+        dayStamps:state.dayStamps, pending:state.pending, metaAt:state.metaAt, metaDirty:state.metaDirty}));
       if(!storageOK){ storageOK=true; render(); }
     }catch(e){
       if(storageOK){ storageOK=false; toast("Couldn't save on this phone. Export a backup now."); }
       throw e;
     }
   },
-  saveSettings(s){ state.settings=s; try{ this.writeLocal(); }catch(e){ return Promise.reject(e); } render(); return Promise.resolve(); },
-  saveMonth(id, body){ state.monthsRaw[id]=body; rebuildDays(); try{ this.writeLocal(); }catch(e){ return Promise.reject(e); } return Promise.resolve(); }
+  saveSettings(s){ state.settings=s; state.metaAt.settings=Date.now(); state.metaDirty=true; try{ this.writeLocal(); }catch(e){ return Promise.reject(e); } Sync.schedule(); render(); return Promise.resolve(); },
+  saveMonth(id, body){ state.monthsRaw[id]=body; rebuildDays(); try{ this.writeLocal(); }catch(e){ return Promise.reject(e); } Sync.schedule(); return Promise.resolve(); }
 };
+function markDay(k){ state.dayStamps[k]=Date.now(); state.pending[k]=1; }
+function markMeta(){ state.metaDirty=true; }
+
+/* ---------- sync across devices (Supabase) ----------
+   Each day is one row; when two devices edit the same day, the later save wins (the database enforces it too).
+   Sources, currency and goals live in one row per account and are merged field by field. */
+const Sync = (function(){
+  const URL_ = "https://lznraybjpvhbujklkmli.supabase.co";
+  // Publishable key: meant to ship in the app. Row-level security limits every account to its own rows.
+  const KEY = "sb_publishable_qcIULwp2LsAkxUmlcpZzwA_x2Pl9r8L";
+  const K_SESSION="earnings-daybook-session", K_USER="earnings-daybook-synced-user", K_CURSOR="earnings-daybook-cursor", K_LAST="earnings-daybook-last-sync";
+  const ls={ get(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }, del(k){ try{ localStorage.removeItem(k); }catch(e){} } };
+  let session=ls.get(K_SESSION);
+  const status={ state: session?"idle":"signed-out", lastSync: ls.get(K_LAST), error:"" };
+  const set=p=>{ Object.assign(status,p); if(typeof render==="function") render(); };
+
+  async function call(path, {method="GET", body, auth=true, headers={}}={}){
+    const h={apikey:KEY, "Content-Type":"application/json", ...headers};
+    if(auth) h.Authorization="Bearer "+(await token());
+    const r=await fetch(URL_+path, {method, headers:h, body: body===undefined?undefined:JSON.stringify(body)});
+    const text=await r.text(); let data=null; try{ data=text?JSON.parse(text):null; }catch(e){ data=text; }
+    if(!r.ok){ const e=new Error((data&&(data.msg||data.message||data.error_description||data.error))||r.statusText||"Request failed"); e.status=r.status; throw e; }
+    return data;
+  }
+  function keep(s){
+    session={access_token:s.access_token, refresh_token:s.refresh_token, expires_at:s.expires_at||Math.floor(Date.now()/1000)+(s.expires_in||3600), user:{id:s.user.id, email:s.user.email}};
+    ls.set(K_SESSION, session);
+  }
+  let refreshing=null;
+  async function token(){
+    if(!session) throw Object.assign(new Error("Not signed in"),{status:401});
+    if(session.expires_at*1000-Date.now()>60e3) return session.access_token;
+    refreshing = refreshing || call("/auth/v1/token?grant_type=refresh_token",{method:"POST", auth:false, body:{refresh_token:session.refresh_token}})
+      .then(keep).catch(e=>{ if(e.status===400||e.status===401) forget("You were signed out. Sign in again to keep syncing."); throw e; }).finally(()=>{ refreshing=null; });
+    await refreshing; return session.access_token;
+  }
+  function forget(msg){ session=null; ls.del(K_SESSION); set({state:"signed-out", error:msg||""}); }
+
+  async function signIn(email, password){
+    keep(await call("/auth/v1/token?grant_type=password",{method:"POST", auth:false, body:{email, password}}));
+    set({state:"idle", error:""}); return syncNow();
+  }
+  async function signUp(email, password){
+    const back=encodeURIComponent(location.origin+location.pathname);
+    const res=await call("/auth/v1/signup?redirect_to="+back,{method:"POST", auth:false, body:{email, password}});
+    if(!res || !res.access_token) return false; // must confirm the email first
+    keep(res); set({state:"idle", error:""}); await syncNow(); return true;
+  }
+  async function signOut(){
+    try{ await call("/auth/v1/logout",{method:"POST"}); }catch(e){}
+    ls.del(K_USER); ls.del(K_CURSOR); forget("");
+  }
+
+  // ---- meta (sources, currency, goals): merged field by field
+  const localMeta=()=>({settings:state.settings, settingsAt:state.metaAt.settings||0, goals:state.goals, goalsAt:state.metaAt.goals||{}, goalSkips:state.goalSkips, celebrated:state.celebrated});
+  function mergeMeta(a, b){
+    if(!b) return a;
+    const m={};
+    const bSet=(b.settingsAt||0)>(a.settingsAt||0) && b.settings;
+    m.settings = bSet ? b.settings : a.settings; m.settingsAt = Math.max(a.settingsAt||0, b.settingsAt||0);
+    if(!bSet && b.settings && a.settings){ // keep sources only the other device knows about
+      const ids=new Set((a.settings.sources||[]).map(s=>s.id)), extra=(b.settings.sources||[]).filter(s=>!ids.has(s.id));
+      if(extra.length) m.settings={...a.settings, sources:[...(a.settings.sources||[]), ...extra]};
+    }
+    m.goals={week:{}, month:{}, year:{}}; m.goalsAt={};
+    const ids=new Set();
+    for(const side of [a,b]){ for(const id in (side.goalsAt||{})) ids.add(id); for(const t of ["week","month","year"]) for(const k in ((side.goals||{})[t]||{})) ids.add(t+":"+k); }
+    ids.forEach(id=>{ const [t,k]=id.split(":"), ta=(a.goalsAt||{})[id]||0, tb=(b.goalsAt||{})[id]||0;
+      const src = tb>ta ? b : (ta>tb ? a : (((a.goals||{})[t]||{})[k]!=null ? a : b));
+      const v=((src.goals||{})[t]||{})[k]; if(v!=null) m.goals[t][k]=v; if(Math.max(ta,tb)) m.goalsAt[id]=Math.max(ta,tb); });
+    m.goalSkips={...(b.goalSkips||{}), ...(a.goalSkips||{})};
+    m.celebrated={...(b.celebrated||{}), ...(a.celebrated||{})};
+    return m;
+  }
+  function stable(v){
+    if(Array.isArray(v)) return "["+v.map(stable).join(",")+"]";
+    if(v && typeof v==="object") return "{"+Object.keys(v).sort().filter(k=>v[k]!==undefined).map(k=>JSON.stringify(k)+":"+stable(v[k])).join(",")+"}";
+    return JSON.stringify(v);
+  }
+  function applyMeta(m){
+    state.settings=m.settings||state.settings; state.metaAt.settings=m.settingsAt||0;
+    state.goals=m.goals; state.metaAt.goals=m.goalsAt||{}; state.goalSkips=m.goalSkips||{}; state.celebrated=m.celebrated||{};
+  }
+
+  // ---- days
+  function dayRow(k){
+    const mid=k.slice(0,7), d=k.slice(8), m=state.monthsRaw[mid]||{};
+    return {day:k, amounts:(m.days||{})[d]||{}, note:(m.notes||{})[d]||null, edited_at:new Date(state.dayStamps[k]||1).toISOString()};
+  }
+  function applyDay(row){
+    const k=row.day, rs=Date.parse(row.edited_at)||0, mine=state.dayStamps[k]||0;
+    if(state.pending[k] && mine>rs) return false; // this device has a newer save waiting to go up
+    const mid=k.slice(0,7), d=k.slice(8);
+    const m=state.monthsRaw[mid]=state.monthsRaw[mid]||{days:{}}; m.days=m.days||{};
+    const before=stable([m.days[d], (m.notes||{})[d]||null]);
+    m.days[d]=row.amounts||{};
+    if(row.note){ m.notes=m.notes||{}; m.notes[d]=row.note; } else if(m.notes) delete m.notes[d];
+    state.dayStamps[k]=rs; delete state.pending[k];
+    return before!==stable([m.days[d], (m.notes||{})[d]||null]);
+  }
+
+  async function doSync(){
+    const uid=session.user.id;
+    if(ls.get(K_USER)!==uid){ // first sync for this account on this device: send everything up once
+      Object.keys(state.realDays).forEach(k=>{ state.pending[k]=1; });
+      state.metaDirty=true; ls.del(K_CURSOR);
+    }
+    let changed=false;
+    // 1. send this device's unsent days
+    const keys=Object.keys(state.pending);
+    for(let i=0;i<keys.length;i+=500){
+      const chunk=keys.slice(i,i+500), sent={}; chunk.forEach(k=>{ sent[k]=state.dayStamps[k]||0; });
+      const kept=await call("/rest/v1/daybook_days?on_conflict=user_id,day&select=day,amounts,note,edited_at",{method:"POST", headers:{Prefer:"resolution=merge-duplicates,return=representation"}, body:chunk.map(dayRow)});
+      chunk.forEach(k=>{ if((state.dayStamps[k]||0)===sent[k]) delete state.pending[k]; });
+      // The database keeps whichever save is newer; if another device's won, take its version
+      (kept||[]).forEach(r=>{ if(!state.pending[r.day] && applyDay(r)) changed=true; });
+    }
+    // 2. fetch days other devices saved since the last pull (with a small overlap; applying twice is harmless)
+    let cursor=ls.get(K_CURSOR)||"1970-01-01T00:00:00Z", newest=cursor, from=new Date(Date.parse(cursor)-5000).toISOString();
+    for(let guard=0; guard<50; guard++){
+      const rows=await call("/rest/v1/daybook_days?select=day,amounts,note,edited_at,synced_at&synced_at=gt."+encodeURIComponent(from)+"&order=synced_at.asc&limit=1000");
+      rows.forEach(r=>{ if(applyDay(r)) changed=true; if(r.synced_at>newest) newest=r.synced_at; });
+      if(rows.length<1000) break;
+      from=rows[rows.length-1].synced_at;
+    }
+    // 3. sources, currency and goals
+    const rows=await call("/rest/v1/daybook_meta?select=data");
+    const remote=rows[0]?rows[0].data:null, merged=mergeMeta(localMeta(), remote);
+    if(stable(merged)!==stable(localMeta())){ applyMeta(merged); changed=true; }
+    if(!remote || stable(merged)!==stable(remote)){
+      await call("/rest/v1/daybook_meta?on_conflict=user_id",{method:"POST", headers:{Prefer:"resolution=merge-duplicates,return=minimal"}, body:{data:merged}});
+    }
+    state.metaDirty=false;
+    ls.set(K_CURSOR, newest); ls.set(K_USER, uid);
+    if(changed) rebuildDays();
+    try{ store.writeLocal(); }catch(e){}
+    return true;
+  }
+
+  let running=null, again=false, timer=null;
+  function syncNow(){
+    if(!session) return Promise.resolve(false);
+    if(running){ again=true; return running; }
+    clearTimeout(timer); set({state:"syncing", error:""});
+    running=doSync().then(ok=>{ status.lastSync=Date.now(); ls.set(K_LAST, status.lastSync); set({state:session?"idle":"signed-out"}); return ok; })
+      .catch(e=>{ console.warn("Sync failed:", e); const off=!navigator.onLine || e instanceof TypeError; if(session) set({state:off?"offline":"error", error:off?"":e.message}); return false; })
+      .finally(()=>{ running=null; if(again){ again=false; schedule(1000); } });
+    return running;
+  }
+  function schedule(delay){ if(!session) return; clearTimeout(timer); timer=setTimeout(syncNow, delay==null?2500:delay); }
+  function start(){
+    setInterval(()=>{ if(document.visibilityState==="visible") syncNow(); }, 120e3);
+    document.addEventListener("visibilitychange", ()=>syncNow());
+    window.addEventListener("online", ()=>syncNow());
+    syncNow();
+  }
+  return { get signedIn(){ return !!session; }, get email(){ return session?session.user.email:null; }, status, signIn, signUp, signOut, syncNow, schedule, start };
+})();
 function rebuildDays(){
   const out={};
   for(const mid in state.monthsRaw){ const ds=(state.monthsRaw[mid]||{}).days||{}; for(const d in ds){ out[mid+"-"+d]=ds[d]||{}; } }
@@ -604,12 +796,13 @@ function applyImport(){
   for(const mid in d.months){
     const inc=(d.months[mid]||{}).days||{}, incNotes=(d.months[mid]||{}).notes||{};
     months[mid]=months[mid]||{days:{}}; months[mid].days=months[mid].days||{};
-    for(const day in inc) months[mid].days[day]=inc[day];
+    for(const day in inc){ months[mid].days[day]=inc[day]; markDay(mid+"-"+day); }
     if(Object.keys(incNotes).length){ months[mid].notes=months[mid].notes||{}; for(const day in incNotes) months[mid].notes[day]=incNotes[day]; }
   }
-  if(d.goals) for(const type of ["week","month","year"]) for(const key in (d.goals[type]||{})) if(state.goals[type][key]==null) state.goals[type][key]=d.goals[type][key];
-  state.settings=s; state.monthsRaw=months; rebuildDays(); pendingImport=null;
+  if(d.goals) for(const type of ["week","month","year"]) for(const key in (d.goals[type]||{})) if(state.goals[type][key]==null){ state.goals[type][key]=d.goals[type][key]; state.metaAt.goals[type+":"+key]=Date.now(); }
+  state.settings=s; state.metaAt.settings=Date.now(); markMeta(); state.monthsRaw=months; rebuildDays(); pendingImport=null;
   try{ store.writeLocal(); toast("Backup imported"); }catch(e){}
+  Sync.schedule(0);
   state.dirty=false; $("#entries").dataset.date=""; render();
 }
 function saved_any_days(){ return Object.keys(state.realDays).length>0; }
@@ -683,8 +876,11 @@ function setGoals(values){ // {type: number|null} for the current periods
   const t=todayKey();
   for(const type in values){ const key=periodKey(type,t), v=values[type];
     if(v>0) state.goals[type][key]=v; else delete state.goals[type][key];
+    state.metaAt.goals[type+":"+key]=Date.now();
     delete state.goalSkips[type+":"+key]; }
+  markMeta();
   try{ store.writeLocal(); }catch(e){}
+  Sync.schedule();
 }
 function checkGoals(savedKey){
   const hits=[];
@@ -694,7 +890,9 @@ function checkGoals(savedKey){
     state.celebrated[id]=true; hits.push(p);
   });
   if(!hits.length) return;
+  markMeta();
   try{ store.writeLocal(); }catch(e){}
+  Sync.schedule();
   const names=hits.map(h=>goalNoun(h.type));
   const lead = names.length===1 ? names[0][0].toUpperCase()+names[0].slice(1)+" goal reached!" : "Goals reached: "+names.join(", ")+"!";
   const h=hits[hits.length-1];
@@ -840,7 +1038,7 @@ function renderReminder(){
     })),
     el("div",{class:"row"},
       el("button",{class:"btn primary", type:"submit", style:"flex:1", text:"Set goals"}),
-      el("button",{class:"btn", type:"button", text:"Not now", onclick:()=>{ missing.forEach(type=>{ state.goalSkips[type+":"+periodKey(type,t)]=true; }); try{ store.writeLocal(); }catch(e){} render(); }})));
+      el("button",{class:"btn", type:"button", text:"Not now", onclick:()=>{ missing.forEach(type=>{ state.goalSkips[type+":"+periodKey(type,t)]=true; }); markMeta(); try{ store.writeLocal(); }catch(e){} Sync.schedule(); render(); }})));
 }
 $("#goalRemind").addEventListener("submit", e=>{
   e.preventDefault();
@@ -849,7 +1047,7 @@ $("#goalRemind").addEventListener("submit", e=>{
   if(bad){ toast("Use numbers only for goals."); return; }
   // an empty box here means "skip this period", not "delete"
   const t=todayKey();
-  for(const type in vals){ if(!vals[type]){ state.goalSkips[type+":"+periodKey(type,t)]=true; delete vals[type]; } }
+  for(const type in vals){ if(!vals[type]){ state.goalSkips[type+":"+periodKey(type,t)]=true; markMeta(); delete vals[type]; } }
   setGoals(vals); toast("Goals set"); render();
 });
 function goDate(k){
@@ -889,6 +1087,7 @@ $("#entryForm").addEventListener("submit", async e=>{
   if(note){ body.notes=body.notes||{}; body.notes[d]=note; } else if(body.notes){ delete body.notes[d]; }
   const btn=$("#saveBtn"); btn.disabled=true;
   const before=state.monthsRaw[mid];
+  markDay(k);
   try{
     await store.saveMonth(mid, body);
     state.dirty=false; $("#entries").dataset.date="";
@@ -1159,6 +1358,42 @@ function renderThemes(){
     el("span",{class:"sw"}, th.sw.map(c=>el("i",{style:"background:"+c}))), el("b",{text:th.name}))));
 }
 
+/* ---------- SETTINGS: sync ---------- */
+function agoText(ms){ if(!ms) return "Never"; const s=(Date.now()-ms)/1000; if(s<60) return "Just now"; if(s<3600) return Math.floor(s/60)+" min ago"; if(s<86400) return Math.floor(s/3600)+" h ago"; return fmtDate(keyOf(new Date(ms)),{month:"short",day:"numeric"}); }
+function renderSync(){
+  const st=Sync.status, inn=Sync.signedIn;
+  $("#syncOut").hidden=inn; $("#syncIn").hidden=!inn;
+  if(inn){ $("#syncWho").textContent=Sync.email; $("#syncWhen").textContent = st.state==="syncing" ? "Syncing…" : agoText(st.lastSync); }
+  const msg=$("#syncMsg");
+  const text = st.error ? st.error : st.state==="offline" ? "Offline. Changes will sync when you're back online." : (!inn && st.info) ? st.info : "";
+  msg.hidden=!text; msg.textContent=text; msg.style.color = st.error ? "var(--bad)" : "var(--muted)";
+}
+let authBusy=false;
+async function auth(kind){
+  if(authBusy) return;
+  const email=$("#syncEmail").value.trim(), pass=$("#syncPass").value;
+  if(!email || pass.length<6){ Sync.status.error="Enter your email and a password of at least 6 characters."; renderSync(); return; }
+  authBusy=true; $("#signinBtn").disabled=$("#signupBtn").disabled=true; Sync.status.error=""; Sync.status.info=""; renderSync();
+  try{
+    if(kind==="up"){
+      const now=await Sync.signUp(email, pass);
+      if(!now) Sync.status.info="Check your email for a confirmation link, then come back here and sign in.";
+      else toast("Account created. Syncing is on.");
+    } else { await Sync.signIn(email, pass); toast("Signed in. Syncing is on."); }
+    $("#syncPass").value="";
+  }catch(e){
+    Sync.status.error = /invalid login/i.test(e.message) ? "That email and password don't match. Check them, or create an account first."
+      : /already registered|already exists/i.test(e.message) ? "There's already an account with that email. Use Sign in instead."
+      : /not confirmed/i.test(e.message) ? "Confirm your email first (check your inbox), then sign in."
+      : navigator.onLine ? e.message : "You're offline. Connect to the internet to sign in.";
+  }
+  authBusy=false; $("#signinBtn").disabled=$("#signupBtn").disabled=false; render();
+}
+$("#signinForm").addEventListener("submit", e=>{ e.preventDefault(); auth("in"); });
+$("#signupBtn").onclick=()=>auth("up");
+$("#syncNowBtn").onclick=()=>{ Sync.syncNow().then(ok=>{ if(ok) toast("Synced"); }); };
+$("#signoutBtn").onclick=async()=>{ await Sync.signOut(); toast("Signed out. Entries stay on this device."); render(); };
+
 /* ---------- SETTINGS: sources ---------- */
 function editSettings(mut){
   if(state.sample){ toast("Leave sample mode to change sources."); return; }
@@ -1229,7 +1464,10 @@ function render(){
   if(!state.dirty && sig!==lastSrcSig){ loadDraft(); }
   lastSrcSig=sig;
   // storage status, backup reminder and the Your data card
-  setSync(storageOK ? "Saved on this phone" : "Not saving", !storageOK);
+  const ss=Sync.status.state;
+  if(!storageOK) setSync("Not saving", true);
+  else if(!Sync.signedIn) setSync("Saved on this device");
+  else setSync(ss==="syncing" ? "Syncing…" : ss==="offline" ? "Offline · will sync" : ss==="error" ? "Sync problem" : "Synced", ss==="error");
   const ban=$("#banner");
   ban.hidden=storageOK; if(!storageOK) ban.textContent="This phone isn't letting the Daybook save. If you're in a Private tab, open it in a normal tab or from your Home Screen. Export a backup so nothing is lost.";
   const lb=lastBackup(), nDays=Object.keys(state.realDays).length, stale=nDays>2 && (!lb || daysSince(lb)>=14);
@@ -1248,7 +1486,7 @@ function render(){
   if(state.view==="today") renderToday();
   else if(state.view==="charts"){ renderCharts(); if(!Object.keys(days()).length && !state.sample) $("#chartEmpty").replaceChildren(el("p",{text:"Charts fill in as days are logged."}), el("button",{class:"btn", type:"button", text:"Preview with sample numbers", onclick:startSample})); else $("#chartEmpty").replaceChildren(el("p",{text:"Nothing logged in this period."})); }
   else if(state.view==="forecast") renderForecast();
-  else if(state.view==="settings"){ renderGoalsCard(); renderThemes(); renderSources(); }
+  else if(state.view==="settings"){ renderGoalsCard(); renderThemes(); renderSources(); renderSync(); }
 }
 // re-colour charts and the status bar when the theme or light/dark setting changes
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>{ syncThemeColor(); render(); });
@@ -1260,6 +1498,7 @@ setInterval(()=>{ const t=todayKey(); if(t!==lastToday){ if(state.date===lastTod
 
 store.init();
 route();
+Sync.start();
 if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
 })();
 </script>

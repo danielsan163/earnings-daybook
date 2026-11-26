@@ -1,5 +1,5 @@
 // Bump VERSION whenever you change index.html so phones pick up the new copy.
-const VERSION = "daybook-v3";
+const VERSION = "daybook-v4";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon-180.png", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {
@@ -11,6 +11,8 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET") return;
+  // Sync requests must always go to the network, never to the cache.
+  if (new URL(req.url).hostname.endsWith(".supabase.co")) return;
   if (req.mode === "navigate") {
     // Try the network for updates, but fall back to the saved copy after 3 s on a weak signal.
     e.respondWith(new Promise(resolve => {
